@@ -17,7 +17,7 @@ trait AgentFunctionImpl:
    * @tparam T type of element
    * @return a random element from the list effectively simulating a random choice
    */
-  private def randomElem[T](l: List[T]): T = shuffle(l).head
+  def randomElem[T](l: List[T]): T = shuffle(l).head
 
   /**
    * Private helper method that converts a given probability distribution over
