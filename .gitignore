@@ -1,0 +1,4 @@
+target
+*.txt
+.bsp
+.scala-build
