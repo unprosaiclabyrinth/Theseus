@@ -1,5 +1,5 @@
 target
 wumpus_*.txt
-_*.txt
+grading_*.txt
 .bsp
 .scala-build
