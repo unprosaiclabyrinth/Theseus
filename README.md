@@ -5,7 +5,7 @@ This project implements different intelligent agent architectures for an agent c
 + The agent starts in (1, 1), facing east.
 + There are exactly two pits in the world.
 + Actions are deterministic (e.g.:- a `GO_FORWARD` will cause the agent to move one square forward with 100% certainty, without any chance of the agent turning left instead).
-+ `NO_OP` is a possible action that does nothing. It has no cost, unlike other actions.
++ A `NO_OP` is a possible action that does nothing. It has no cost, unlike other actions.
 
 The agent aims to maximize the **average** score. The different architectures the project implements are:-
 
