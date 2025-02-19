@@ -22,8 +22,8 @@ All agent architectures are implemented in Scala. The `src` directory contains t
 The project repo contains a Makefile that automates building and running the project. The Makefile runs the project with the options `nonDeterministicMode` and `randomAgentLoc` set to `false`. The Makefile contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the project is run after checking for the necessary tools as:-
 
 ```zsh
-$ make check
-$ make #or "make run"
+make check
+make #or "make run"
 ```
 
 The project was tested using:-
@@ -42,7 +42,7 @@ The agent architectures are generally evaluated on their average score after 10,
 The script can be run using `-h` to display a help message. In general, the script takes two arguments: `num_trials` with option`-n` and `output_file` with option `-o`. The argument `num_trials` specifies the number of times the simulation is run and all the resulting scores are compiled in the file specified by the argument `output_file`. The arguments are optional; the default values for `num_trials` and `output_file` are 10 and “wumpus_eval.txt” respectively. The script prints out the average score over the `num_trials` simulations run, i.e. the average of all the scores written to `output_file`. The project must be compiled (using `make build`) before running the script for it to work. The usage of the evaluation script can be summarized as:-
 
 ```zsh
-$ ./wumpus_eval.sh [-n <num_trials>] [-o <output_file>] [-h]
+./wumpus_eval.sh [-n <num_trials>] [-o <output_file>] [-h]
 ```
 
 **Note: The script uses the Unix shell utility `bc` for arithmetic computations. Hence, it should be installed for the script to work.**
