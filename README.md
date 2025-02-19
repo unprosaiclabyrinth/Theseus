@@ -1,17 +1,16 @@
 # Overview
 
-This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (TODO: insert wumpus world link) (described in AIMA 4^th^ edition with slight variations). The architectures are implemented with the *a priori* knowledge that:-
+This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (described in AIMA 4ed with slight variations). The architectures are implemented with the *a priori* knowledge that:-
 
 + The agent starts in (1, 1), facing east.
 + There are exactly two pits in the world.
 + Actions are deterministic (e.g.:- a `GO_FORWARD` will cause the agent to move one square forward with 100% certainty, without any chance of the agent turning left instead).
++ A `NO_OP` has no cost. Others do.
 
 The agent aims to maximize the **average** score. The different architectures the project implements are:-
 
 1. Simple reflex agent (SRA)
 2. Model-based reflex agent (MRA) 
-
-TODO: Insert cheesy/cool agent line
 
 # Getting Started
 
