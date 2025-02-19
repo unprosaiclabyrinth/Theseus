@@ -1,6 +1,12 @@
 # Overview
 
-This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (TODO: insert wumpus world link) (described in AIMA 4^th^ edition with slight variations). The agent aims to maximize the score. The different architectures the project implements are:-
+This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (TODO: insert wumpus world link) (described in AIMA 4^th^ edition with slight variations). The architectures are implemented with the *a priori* knowledge that:-
+
++ The agent starts in (1, 1), facing east.
++ There are exactly two pits in the world.
++ Actions are deterministic (e.g.:- a `GO_FORWARD` will cause the agent to move one square forward with 100% certainty, without any chance of the agent turning left instead).
+
+The agent aims to maximize the score. The different architectures the project implements are:-
 
 1. Simple reflex agent (SRA)
 2. Model-based reflex agent (MRA) 
@@ -9,7 +15,7 @@ TODO: Insert cheesy/cool agent line
 
 # Getting Started
 
-All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The desired agent architecture can be specified on the "specify agent" line in `src/java/AgentFunction.java`. Use:-
+All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The desired agent architecture can be specified on the "specify agent" line in `src/java/AgentFunction.java`. Replace that line with:-
 
 + `SimpleReflexAgent.process(tp)`{.java} for a simple reflex agent,
 + `ModelBasedReflexAgent.process(tp)`{.java} for a model-based reflex agent.
