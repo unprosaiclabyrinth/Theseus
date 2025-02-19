@@ -6,7 +6,7 @@ This project implements different intelligent agent architectures for an agent c
 + There are exactly two pits in the world.
 + Actions are deterministic (e.g.:- a `GO_FORWARD` will cause the agent to move one square forward with 100% certainty, without any chance of the agent turning left instead).
 
-The agent aims to maximize the score. The different architectures the project implements are:-
+The agent aims to maximize the **average** score. The different architectures the project implements are:-
 
 1. Simple reflex agent (SRA)
 2. Model-based reflex agent (MRA) 
