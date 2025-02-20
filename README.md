@@ -42,6 +42,7 @@ The agent architectures are generally evaluated on their average score after 10,
 The script can be run using `-h` to display a help message. In general, the script takes two arguments: `num_trials` with option`-n` and `output_file` with option `-o`. The argument `num_trials` specifies the number of times the simulation is run and all the resulting scores are compiled in the file specified by the argument `output_file`. The arguments are optional; the default values for `num_trials` and `output_file` are 10 and “wumpus_eval.txt” respectively. The script prints out the average score over the `num_trials` simulations run, i.e. the average of all the scores written to `output_file`. The project must be compiled (using `make build`) before running the script for it to work. The usage of the evaluation script can be summarized as:-
 
 ```zsh
+make build
 ./wumpus_eval.sh [-n <num_trials>] [-o <output_file>] [-h]
 ```
 
