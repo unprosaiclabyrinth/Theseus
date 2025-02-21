@@ -238,20 +238,25 @@ class WorldApplication {
 	     
 		// Pit generation
 		for (int i = 0; i < pits; i++) {
-	     
+
 			x = randGen.nextInt(size);
 			y = randGen.nextInt(size);
-		     
+
 			while ((x == agentXLoc && y == agentYLoc) | occupied[x][y] == true) {
 				x = randGen.nextInt(size);
 				y = randGen.nextInt(size);    	   
 			}
-		     
+
 			occupied[x][y] = true;
 
 			newWorld[x][y][0] = 'P';
-		     
+
 		}
+//		occupied[2][0] = true;
+//		newWorld[2][0][0] = 'P';
+//
+//		occupied[1][1] = true;
+//		newWorld[1][1][0] = 'P';
 
 		// Wumpus Generation
 		x = randGen.nextInt(size);
