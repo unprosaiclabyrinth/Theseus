@@ -18,7 +18,7 @@
 class AgentFunction {
     public int process(TransferPercept tp) {
 		// return action to be performed
-	    return ModelBasedReflexAgent.process(tp);	    
+	    return ModelBasedReflexAgent.process(tp); // specify agent
 	}
 	
 	// public method to return the agent's name
