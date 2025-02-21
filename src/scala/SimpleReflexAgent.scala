@@ -20,7 +20,7 @@ object SimpleReflexAgent extends AgentFunctionImpl:
     (tp.getBump, tp.getGlitter, tp.getBreeze, tp.getStench, tp.getScream) match {
       // Use only left turns since a right turn is 3 left turns. Reduce wastage
       // of moves by preventing agent from going left-right-left-right-left...
-      // Bias towards left since I start facing east. Hence maximize exploration
+      // Bias towards left since I start facing east. Hence, maximize exploration
       // and score
       case (_, true, _, _, _) /* <_,glitter,_,_,_> */ => Action.GRAB
       case (true, false, _, _, _) /* <bump,none,_,_,_> */ => Action.TURN_LEFT
@@ -32,22 +32,22 @@ object SimpleReflexAgent extends AgentFunctionImpl:
         // must be the primary action on a stench. Weigh turning and going forwards
         // equally signifying a random choice (and enabling further exploration).
         probabilisticChoice(Map(
-          Action.SHOOT -> 0.65,
-          Action.GO_FORWARD -> 0.175,
-          Action.TURN_LEFT -> 0.175
+          Action.SHOOT -> Probability(13, 20),     // 13/20 = 65%
+          Action.GO_FORWARD -> Probability(7, 40), // 7/40 = 17.5%
+          Action.TURN_LEFT -> Probability(7, 40)   // 7/40 = 17.5%
         ))
       case (false, false, true, false, _) /* <none,none,breeze,none,_> */ =>
         // Randomly choose between going forward and turning as with wumpus stench.
         probabilisticChoice(Map(
-          Action.GO_FORWARD -> 0.5,
-          Action.TURN_LEFT -> 0.5
+          Action.GO_FORWARD -> Probability(1, 2), // 1/2 = 50%
+          Action.TURN_LEFT -> Probability(1, 2)   // 1/2 = 50%
         ))
       case (false, false, false, false, _) /* <none,none,_,none,_> */ =>
         // Weigh going forward more than in case of a breeze since turning too much
         // and not going forwards hinders exploration and decreases score. In case of
         // a breeze, turning increases chances of evading the pit (conjecture).
         probabilisticChoice(Map(
-          Action.GO_FORWARD -> 0.65,
-          Action.TURN_LEFT -> 0.35
+          Action.GO_FORWARD -> Probability(13, 20), // 13/20 = 65%
+          Action.TURN_LEFT -> Probability(7, 20),   // 7/20 = 35%
         ))
     }
