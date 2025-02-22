@@ -37,7 +37,7 @@ The `reports` directory contains documents detailing the agent designs.
 
 # Evaluation
 
-The agent architectures are generally evaluated on their average score after 10,000 runs. The `eval` directory contains the score lists for 10,000 runs for all agents, whose summary statistics are provided in the respective reports. The $$10,\!000$ trials can be run using:-
+The agent architectures are generally evaluated on their average score after 10,000 runs. The `scores` directory contains the score lists for 10,000 runs for all agents, whose summary statistics are provided in the respective reports. The $$10,\!000$ trials can be run using:-
 ```zsh
 make eval # this requires Julia
 ```
