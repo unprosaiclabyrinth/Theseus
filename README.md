@@ -41,11 +41,11 @@ The agent architectures are generally evaluated on their average score after 10,
 ```zsh
 make tenk # this requires Julia
 ```
-Feel free to run your own trials. A helper script called `wumpus_eval.sh` is provided in the project repo for this purpose. The script can be run using `-h` to display a help message. In general, the script takes three arguments: `num_trials` with option`-n`, `output_file` with option `-o`, and input file with option `-i`. The argument `num_trials` specifies the number of times the simulation is run and all the resulting scores are compiled in the file specified by the argument `output_file`. The argument `imput_file` specifies the file from which the script reads the scores, hence it is also the file to which the simulator writes the output. The arguments are optional; the default value is 10 for `num_trials`, "wumpus_eval.txt" for `output_file`, and "wumpus_out.txt" for `input_file`. The script prints out the average score over the `num_trials` simulations run, i.e. the average of all the scores written to `output_file`. The project must be compiled (using `make build`) before running the script for it to work. The usage of the evaluation script can be summarized as:-
+Feel free to run your own trials. A helper script called `wumpus_eval.sh` is provided in the project repo for this purpose. The script can be run using `-h` to display a help message. In general, the script takes three arguments: `num_trials` with option`-n`, `output_file` with option `-o`, and input file with option `-i`. The argument `num_trials` specifies the number of times the simulation is run and all the resulting scores are compiled in the file specified by the argument `output_file`. The argument `imput_file` specifies the file from which the script reads the scores, hence it is also the file to which the simulator writes the output. The arguments are optional; the default value is 10 for `num_trials`, "wumpus_eval.txt" for `output_file`, and "wumpus_out.txt" for `input_file`.
+
+The last two lines of the script can be uncommented to make it print out the average score over the `num_trials` simulations run, i.e. the average of all the scores written to `output_file`. **The script uses the Unix shell utility `bc` for the mean computation. Hence, it should be installed for this to work.** The project must be compiled (using `make build`) before running the script for it to work. The usage of the evaluation script can be summarized as:-
 
 ```zsh
 make build
 ./wumpus_eval.sh [-n <num_trials>] [-o <output_file>] [-i <input_file>] [-h]
 ```
-
-**Note: The script uses the Unix shell utility `bc` for arithmetic computations. Hence, it should be installed for the script to work.**
