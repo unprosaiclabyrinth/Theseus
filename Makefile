@@ -23,7 +23,7 @@ build: clean
 run: build
 	@scala run -cp target --main-class WorldApplication -- -n false -a false
 
-tenk: build
+tenk: build eval10k.jl
 	JULIA_NUM_THREADS=10 time julia eval10k.jl
 
 # Clean the project
@@ -31,5 +31,5 @@ clean:
 	@rm -rf target
 
 # Phony targets
-.PHONY: build run eval clean 
+.PHONY: build run tenk clean 
 
