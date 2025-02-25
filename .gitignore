@@ -1,5 +1,8 @@
 target
 wumpus_*.txt
-grading_*.txt
+grading
 .bsp
 .scala-build
+deliverables
+eval.R
+update.sh
