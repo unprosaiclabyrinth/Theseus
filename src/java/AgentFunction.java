@@ -16,14 +16,14 @@
  */
 
 class AgentFunction {
-    public int process(TransferPercept tp) {
+	public int process(TransferPercept tp) {
 		// return action to be performed
-	    return ModelBasedReflexAgent.process(tp); // specify agent
+		return ModelBasedReflexAgent.process(tp); // specify agent
 	}
 	
 	// public method to return the agent's name
 	// do not remove this method
 	public String getAgentName() {
-        return "Theseus511";
+		return "Theseus511";
 	}
 }
