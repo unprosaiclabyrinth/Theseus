@@ -1,4 +1,4 @@
-# ![](wumpus-world.png)
+![](wumpus-world.png)
 
 This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (described in AIMA 4ed with slight variations). The architectures are implemented with the *a priori* knowledge that:-
 
