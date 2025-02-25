@@ -42,7 +42,7 @@ The project was tested using:-
 ```java
 return CustomAgent.process(tp) // specify agent
 ```
-3. Make sure that you have copied the comment as well and have ended the line with it.
+3. Make sure that you have copied the comment verbatim and have ended the line with it.
 4. Run `make run` to run the agent. This will not break the `sra` and `mra` targets.
 
 # Design
