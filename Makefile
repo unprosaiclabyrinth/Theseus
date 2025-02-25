@@ -44,4 +44,4 @@ clean:
 	@rm -rf target
 
 # Phony targets
-.PHONY: sra mra build run tenk clean
+.PHONY: sra mra check build run tenk clean
