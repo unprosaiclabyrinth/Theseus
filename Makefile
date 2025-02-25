@@ -4,13 +4,15 @@ all:
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
-	@sed -i '.mra' 's|.*// specify agent|\t\treturn SimpleReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn SimpleReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
-	@mv src/java/AgentFunction.java.mra src/java/AgentFunction.java
+	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
 
 # Model-based reflex agent
 mra: src/scala/ModelBasedReflexAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn ModelBasedReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
+	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
 
 # Check if required tools are installed
 check:
