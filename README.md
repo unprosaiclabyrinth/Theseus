@@ -37,7 +37,7 @@ The project was tested using:-
 
 ## Proper protocol for custom implementations
 
-1. Implement the custom agent in a `src/acala/CustomAgent.scala` object that extends the `AgentFunctionImpl` trait.
+1. Implement the custom agent in a `src/scala/CustomAgent.scala` object that extends the `AgentFunctionImpl` trait.
 2. Override and define the abstract `process` method such that it returns the actions given the percepts. Replace the "specify agent" line (line 21) in `src/java/AgentFunction.java` with:-
 ```java
 return CustomAgent.process(tp) // specify agent
