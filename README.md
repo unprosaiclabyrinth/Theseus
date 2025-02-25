@@ -26,12 +26,10 @@ The model-based reflex agent can be run using:-
 ```zsh
 make mra
 ```
-A custom implementation of the agent function can be run using:-
+A custom implementation of the agent function can be run using (**note: if proper protocol or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra` and `mra` targets altogether**):-
 ```zsh
 make run
 ```
-**Note: If proper protocol or formatting is not followed, a custom run could lead to junk backup files in the `src/java` directory, or could break the `sra` and `mra` targets altogether.**
-
 The project was tested using:-
 
 + **Scala Version:** 3.6.3
