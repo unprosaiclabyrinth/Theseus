@@ -35,6 +35,15 @@ The project was tested using:-
 + **Scala Version:** 3.6.3
 + **Java Version:** OpenJDK 22.0.1
 
+## Proper protocol for custom implementations
+
+1. Implement the custom agent in a `src/acala/CustomAgent.scala` object that extends the `AgentFunctionImpl` trait.
+2. Override and define the abstract `process` method such that it returns the actions given the percepts. Replace the "specify agent" line in `src/java/AgentFunction.java` with:-
+```java
+return CustomAgent.process(tp) // specify agent
+```
+3. Run `make run` to run the agent. This will not break the `sra` and `mra` targets.
+
 # Design
 
 The `reports` directory contains documents detailing the agent designs.
