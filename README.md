@@ -14,17 +14,23 @@ The agent aims to maximize the **average** score. The different architectures th
 
 # Getting Started
 
-All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The desired agent architecture can be specified on the "specify agent" line in `src/java/AgentFunction.java`. Replace that line with:-
-
-+ `SimpleReflexAgent.process(tp)` for a simple reflex agent,
-+ `ModelBasedReflexAgent.process(tp)` for a model-based reflex agent.
-
-The project repo contains a Makefile that automates building and running the project. The Makefile runs the project with the options `nonDeterministicMode` and `randomAgentLoc` set to `false`. The Makefile contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the project is run after checking for the necessary tools as:-
-
+All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The project repo contains a Makefile that automates building and running the different agents. The Makefile runs the project with the options `nonDeterministicMode` and `randomAgentLoc` set to `false`. It contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the system is checked for the nexessary tools before running the project. The check command is:-
 ```zsh
 make check
-make #or "make run"
 ```
+The simple reflex agent can be run using:-
+```zsh
+make sra
+```
+The model-based reflex agent can be run using:-
+```zsh
+make mra
+```
+A custom implementation of the agent function can be run using:-
+```zsh
+make run
+```
+**Note: If proper protocol or formatting is not followed, a custom run could lead to junk backup files in the `src/java` directory, or could break the `sra` and `mra` targets altogether.**
 
 The project was tested using:-
 
