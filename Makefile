@@ -1,6 +1,6 @@
 # Default target
 all:
-	@echo "Specify an agent. Available agents: sra, mra"
+	@echo "Specify an agent target. Available agent targets: sra, mra, run"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
