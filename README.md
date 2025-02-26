@@ -64,4 +64,4 @@ The last two lines of the script can be uncommented to make it print out the ave
 make build
 ./wumpus_eval.sh [-n <num_trials>] [-o <output_file>] [-i <input_file>] [-h]
 ```
-The difference between using the `tenk` `make` target and using a vanilla execution of the script to run $10,\!000$ trials (like `./wumpus_eval.sh -n 10000`) is that the `tenk` target runs a Julia script that parallelizes the evaluation under the hood, hence making it faster. The Julia script uses `wumpus_eval.sh` as a subroutine.
+The difference between using the `tenk` `make` target and using a vanilla execution of the script to run 10,000 trials (like `./wumpus_eval.sh -n 10000`) is that the `tenk` target runs a Julia script that parallelizes the evaluation under the hood, hence making it faster. The Julia script uses `wumpus_eval.sh` as a subroutine.
