@@ -333,7 +333,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     // Compute nonzero probabilities and check for possible pits based on the existence of
     // a unique max and another nonzero value. There is a chance of false positives here
     // which almost always leads to DEATH, but the benefit is higher than the cost
-    // associated with that chance. Hence, no robust control.
+    // associated with that chance.
     probabilities.filter(_ != Probability(0, 1)).minOption match {
       case Some(min) =>
         val maxVal = probabilities.max
@@ -364,7 +364,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     // If pit found @ (2,2) and I am stuck in that little infinite loop
     else if unsafeSquares.contains((2, 2), UnsafeTag.Pit) &&
       exploredOrientationCounts.keySet.map(_._1) == Set((1, 1), (1, 2), (2, 1)) then
-      // Take a chance and go forward hence escaping robust control
+      // Take a chance and go forward
       actionQueue.enqueue(Action.GO_FORWARD)
     else
       updatePitCombinations()
