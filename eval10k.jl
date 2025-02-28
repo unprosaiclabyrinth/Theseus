@@ -8,7 +8,7 @@ Threads.@sync @threads for i in 1:5000 # 5000 iterations
     outfile = "jltlv_wumpus_eval$i.txt"
     infile = "jltlv_wumpus_out$i.txt"
     run(`./wumpus_eval.sh -n $num_trials -i $infile -o $outfile`)
-    println("$(threadid()) -> $i")
+    #println("$(threadid()) -> $i")
 end
 
 # Compile all scores
