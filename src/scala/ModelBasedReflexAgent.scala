@@ -33,22 +33,16 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private var numFoundPits: Int = 0 // number of pits whose positions have been found; can be 0, 1, or 2
   private var givenUp: Boolean = false // a boolean value indicating whether the agent has given up
 
-  private val safeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares that are definitely safe
   private val unsafeSquares: mutable.Set[(Position, UnsafeTag)] = mutable.Set.empty // pit/wumpus positions that are found
   private val exploredOrientationCounts: mutable.Map[(Position, Direction), Int] = mutable.Map.empty // pos, dir -> count
   private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // set of squares where a stench is observed
   private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares where a breeze is observed
+  private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares that definitely don't have the wumpus
+  private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares that definitely don't have a pit
   private var pitCombinations: Set[Set[Position]] = Set.empty // set of 2-tuples of possible positions of 2 pits
   /*-----------------*/
 
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty // contains actions to execute
-
-  /**
-   * Private helper to compute all possible positions in the world.
-   * @return a set of all possible positions in the world, from (1,1) through (4,4).
-   */
-  private def allSquares: Set[Position] =
-    (1 to 4).flatMap(x => (1 to 4).flatMap(y => Set((x, y)))).toSet
 
   /**
    * Compute all "neighbors" of a given square along with an action that will get the agent there
@@ -115,7 +109,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
 
   /**
    * Private helper to maximize the agent's exploration of the wumpus world by chossing the least
-   * explored neighbor. If there are muliple least explored neighbors, then choose randomly.
+   * explored neighbor. If there are muliple least explored neighbors, then prefer edge squares.
    * @param nextSquares a pre-computed collection of potential next squares which the agent can go to.
    */
   private def maximizeExploration(nextSquares: Map[Position, Int]): Unit =
@@ -128,10 +122,13 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         exploredOrientationCounts.collect { case (((x, y), _), c) if (x, y) == pos => c }.sum
       // Find the minimum exploration count from given nextSquares
       val minCount = forwardNextSquares.keySet.map(timesExplored).min
-      // Filter for argmins. If there are multiple, choose one randomly
-      actionToMovementSequence(forwardNextSquares(
-        randomElem(forwardNextSquares.keySet.filter(timesExplored(_) == minCount).toList)
-      ))
+      // Filter for argmins. This is definitely nonempty
+      val leastExplored = forwardNextSquares.keySet.filter(timesExplored(_) == minCount)
+      // Prefer edge squares to center squares for systematic and non-wasteful exploration
+      def isCenterSquare(pos: Position): Boolean = Set((2, 2), (2, 3), (3, 2), (3, 3)).contains(pos)
+      val edgeSquares = leastExplored.filterNot(isCenterSquare)
+      if edgeSquares.nonEmpty then actionToMovementSequence(forwardNextSquares(randomElem(edgeSquares.toList)))
+      else actionToMovementSequence(forwardNextSquares(randomElem(leastExplored.toList)))
     else actionToMovementSequence(Action.NO_OP)
 
   /**
@@ -140,7 +137,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    */
   private def explore(): Unit =
     // neighbors func will not return unsafe squares
-    safeSquares ++= neighborsSet(agentPosition)
+    wumpusFreeSquares ++= neighborsSet(agentPosition)
+    pitFreeSquares ++= neighborsSet(agentPosition)
     maximizeExploration(neighborsMap(agentPosition))
 
   /**
@@ -153,7 +151,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     stenchSquares.foldLeft(neighborsSet(stenchSquares.head))(
       (acc: Set[Position], sq: Position) =>
         acc intersect neighborsSet(sq)
-    ) diff safeSquares
+    ) diff wumpusFreeSquares
 
   /**
    * Private helper that is called when:-
@@ -164,7 +162,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private def flagWumpusUnsafe(): Unit =
     maybeWumpusSquares.find(neighborsMap(agentPosition)(_) != Action.GO_FORWARD) match {
       case Some(wumpusPos) =>
-        println(s"Yay! WUMPUS found @ $wumpusPos.")
+        println(s"\"Yay! WUMPUS found @ $wumpusPos.\"")
         unsafeSquares += ((wumpusPos, UnsafeTag.Wumpus))
       case None => assert(false, "This is not possible") // should be dead code
     }
@@ -188,8 +186,9 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * unsafe. The downside here is that the arrow is used up in the case of a miss, and the wumpus can never be
    * killed despite being found. Else (if exactly 3 potential wumpus positions are computed), then don't take any
    * chances and simply turn back and go that way.
+   * @param withBreeze a boolean value indicating whether I am hunting the wumpus while observing a breeze
    */
-  private def huntWumpus(): Unit =
+  private def huntWumpus(withBreeze: Boolean): Unit =
     val wumpusPositions = maybeWumpusSquares // compute potential wumpus positions
     wumpusPositions.size match {
       case 1 => // case: only 1 potential wumpus position
@@ -200,23 +199,30 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         else // if the wumpus is in front, simply SHOOT
           actionQueue.enqueue(Action.SHOOT)
       case 2 => // case: exactly 2 potential wumpus positions
-        if hasArrow then
-           // choose a random potential wumpus position to shoot at
-          val action = neighborsMap(agentPosition)(randomElem(wumpusPositions.toList))
-          if action == Action.GO_FORWARD then
-            actionQueue.enqueue(Action.SHOOT) // shoot in front
-          else actionQueue.enqueue(action, Action.SHOOT) // turn and shoot
-       // If I get here, then I do not have the arrow (since hasArrow is false),
-       // but still observe a stench i.e. the wumpus is alive. Hence, I shot and missed.
-       // The square in front can be eliminated, since the agent always shoots in front.
-       // Also, there are exactly 2 potential wumpus positions since this is that case. Hence,
-       // flag the other square as unsafe.
-        else flagWumpusUnsafe()
+        // just started? use random shooting strategy
+        if exploredOrientationCounts.isEmpty || exploredOrientationCounts.filter {
+          case ((sq, _), _) => sq == agentPosition
+        }.values.sum >= 2 then
+          if hasArrow then
+             // choose a random potential wumpus position to shoot at
+            val action = neighborsMap(agentPosition)(randomElem(wumpusPositions.toList))
+            if action == Action.GO_FORWARD then
+              actionQueue.enqueue(Action.SHOOT) // shoot in front
+            else actionQueue.enqueue(action, Action.SHOOT) // turn and shoot
+          // If I get here, then I do not have the arrow (since hasArrow is false),
+          // but still observe a stench i.e. the wumpus is alive. Hence, I shot and missed.
+          // The square in front can be eliminated, since the agent always shoots in front.
+          // Also, there are exactly 2 potential wumpus positions since this is that case. Hence,
+          // flag the other square as unsafe.
+          else
+            flagWumpusUnsafe()
+            if withBreeze then actionQueue.enqueue(Action.NO_OP)
+            else explore()
+        else actionToMovementSequence(Action.NO_OP) // go back
       case _ => // case: exactly 3 potential wumpus positions
         // if the wumpus cannot be pinpointed, don't take chances and
-        // turn back since that is definitely safe a safe square
-        val turn = randomElem(List(Action.TURN_LEFT, Action.TURN_RIGHT))
-        actionQueue.enqueue(turn, turn, Action.GO_FORWARD) // go back
+        // turn back since that is definitely a wumpus-free square
+        actionToMovementSequence(Action.NO_OP) // go back
     }
 
   /**
@@ -262,8 +268,9 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * Update possible pitCombinations based on safeSquares and breezeSquares knowledge.
    */
   private def updatePitCombinations(): Unit =
-    // any square that is not yet known to be safe can possibly have a pit (is a candidate)
-    val candidateSquares: Set[Position] = allSquares diff safeSquares
+    val allSquares = (1 to 4).flatMap(x => (1 to 4).flatMap(y => Set((x, y)))).toSet
+    // any square that is not yet known to be pit-free can possibly have a pit (is a candidate)
+    val candidateSquares: Set[Position] = allSquares diff pitFreeSquares
     // all 2-combinations of candidate squares are candidate pit combinations
     val allCombinations: Set[Set[Position]] = candidateSquares.toList
       .combinations(2).toSet.map(_.toSet)
@@ -271,20 +278,13 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     val allFoundPits: Set[Position] = unsafeSquares.filter(_._2 == UnsafeTag.Pit).map(_._1).toSet
 
     // filter allCombinations to find possible pitCombinations based on the condition that:-
-    // the union of the neighborSets of the 2 squares form an *exhaustive* set cover of the
-    // set of breeze squares and the 2-tuple contains all pit positions that are already found
+    // breezeSquares is a subset of the union of the neighborSets of the 2 squares and the
+    // 2-tuple contains all pit positions that are already found
     pitCombinations = allCombinations.filter(
       combination => (
-        if breezeSquares.nonEmpty then
-          combination.map(c =>
-            breezeSquares.toSet.intersect(neighborsSet(c))
-          ).foldLeft(Set.empty)(
-            (acc: Set[Position], cover: Set[Position]) => acc union cover
-          ) == breezeSquares // exhaustive cover (*but not necessarily disjoint*)
-        else true
+        breezeSquares.isEmpty || breezeSquares.subsetOf(combination.flatMap(neighborsSet))
       ) && (
-        if allFoundPits.nonEmpty then combination.exists(allFoundPits.contains)
-        else true
+        allFoundPits.isEmpty || combination.exists(allFoundPits.contains)
       )
     )
 
@@ -298,7 +298,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         // then there must be only one 2-tuple to begin with: both of them are pits
         pitCombinations.head.foreach(pitPos =>
           if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
-            println(s"Yay! PIT found @ $pitPos.")
+            println(s"\"Yay! PIT found @ $pitPos.\"")
             unsafeSquares += ((pitPos, UnsafeTag.Pit))
         )
         numFoundPits = 2
@@ -306,7 +306,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         // be sure that the common position is not an already-found pit
         val pitPos = pits.head
         if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
-          println(s"Yay! PIT found @ $pitPos.")
+          println(s"\"Yay! PIT found @ $pitPos.\"")
           unsafeSquares += ((pitPos, UnsafeTag.Pit))
           numFoundPits += 1
         else { /* do nothing */ }
@@ -340,7 +340,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         if probabilities.count(_ == maxVal) == 1 && maxVal > min then
           neighbors.find(pitProbability(_) == maxVal) match {
             case Some(pitPos) =>
-              println(s"Yay! PIT found @ $pitPos.")
+              println(s"\"Yay! PIT found @ $pitPos.\"")
               unsafeSquares += ((pitPos, UnsafeTag.Pit))
               numFoundPits += 1
             case None => /* continue */
@@ -419,7 +419,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * @return a boolean value indicating whether the gold is unreachable for sure
    */
   private def goldUnreachableForSure: Boolean =
-    val allExploredPositions = exploredOrientationCounts.map(_._1._1).toSet
+    val allExploredPositions = exploredOrientationCounts.keySet.map(_._1)
     (wumpusFound && numFoundPits == 2 && allExploredPositions.size == 13) ||
       (!wumpusFound && numFoundPits == 2 && allExploredPositions.size == 14)
 
@@ -429,11 +429,17 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * @return the action to be executed by the model-based reflex agent.
    */
   override def process(tp: TransferPercept): Int =
-    safeSquares += agentPosition // the current position is ofc safe
+    // the current position is ofc safe
+    wumpusFreeSquares += agentPosition
+    pitFreeSquares += agentPosition
 
-    // Give up if the same orientation has been reached more than a set number of times
-    givenUp = givenUp || goldUnreachableForSure ||
-      exploredOrientationCounts.getOrElse((agentPosition, agentDirection), 0) > GIVE_UP_POINT
+    // Give up if GIVE_UP_POINT is reached or gold is unreachable for sure
+    givenUp = {
+      val b = goldUnreachableForSure ||
+        exploredOrientationCounts.getOrElse((agentPosition, agentDirection), 0) > GIVE_UP_POINT
+      if !givenUp && b then println("\"That's it. I give up.\"")
+      givenUp || b
+    }
 
     // condition-action rules
     if actionQueue.isEmpty && !givenUp then
@@ -441,38 +447,37 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         case (_, true, _, _, _) /* <_,glitter,_,_,_> */ =>
           actionQueue.enqueue(Action.GRAB) // win
         case (_, false, false, true, _) /* <_,none,none,stench,_> */ =>
-          // if I'm getting a stench, wumpus is alive
+          pitFreeSquares ++= neighborsSet(agentPosition)
           stenchSquares += agentPosition
-          if hasArrow then huntWumpus()
-          else
-            if !wumpusFound then flagWumpusUnsafe()
-            explore()
+          if wumpusFound then explore()
+          else huntWumpus(false) // hunt without breeze
         case (_, false, true, true, _) /* <_,none,breeze,stench,_> */ =>
           // The only square without a 0-pit-probability neighbor is the starting square.
           // If I get a breeze at the first time step itself, then give up. I know this is
           // the first time step, since there are no explored orientations yet.
           if exploredOrientationCounts.isEmpty then
+            println("\"That's it. I give up.\"")
             givenUp = true
             actionQueue.enqueue(Action.NO_OP)
           else
             breezeSquares += agentPosition
             stenchSquares += agentPosition
             if wumpusFound then handleBreeze()
-            else if hasArrow then huntWumpus()
-            else
-              flagWumpusUnsafe()
-              actionQueue.enqueue(Action.NO_OP)
+            else huntWumpus(true) // hunt with breeze
         case (_, false, false, false, true) /* <_,none,none,none,scream> */ =>
           // immediately occupy the wumpus' square to maximize exploration
-          actionQueue.enqueue(Action.GO_FORWARD)
+//          actionQueue.enqueue(Action.GO_FORWARD)
+          explore()
         case (_, false, true, false, _) /* <_,none,breeze,none,_> */ =>
           // the only square without a 0-pit-probability neighbor is the starting square
           // if I get a breeze at the first time step itself, then give up. I know this is
           // the first time step, since there are no explored orientations yet.
           if exploredOrientationCounts.isEmpty then
+            println("\"That's it. I give up.\"")
             givenUp = true
             actionQueue.enqueue(Action.NO_OP)
           else
+            wumpusFreeSquares ++= neighborsSet(agentPosition)
             breezeSquares += agentPosition
             handleBreeze()
         case (_, false, false, false, false) /* <_,none,none,none,none> */ =>
