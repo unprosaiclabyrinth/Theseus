@@ -46,7 +46,7 @@ done
 # echo "Running wumpus simulation $number times and compiling scores..."
 
 for((i=0;i<number;++i)); do
-    scala run -cp target --main-class WorldApplication -- -n false -a false -s 200 -f "$input_file" > /dev/null;
+    scala run -cp target --main-class WorldApplication -- -n false -a false -f "$input_file" > /dev/null;
     tail -n2 "$input_file" | head -n1 | cut -d ':' -f 2 | awk '{print $1}';
 done > "$output_file"
 
