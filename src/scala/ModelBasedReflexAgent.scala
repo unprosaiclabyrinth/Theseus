@@ -179,14 +179,16 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * (2) the wumpus is not found.
    * Compute the potential wumpus positions, which could be 1, 2, or 3 in number. If only 1 potential wumpus
    * position is computed, then the wumpus is pinpointed and is in an agent's neighboring square. Hence, shoot
-   * with a 100% hit rate. Else if exactly 2 potential wumpus positions are computed, then pinpoint the wumpus
+   * with a 100% hit rate. Else if exactly 2 potential wumpus positions are computed, then don't take a chance
+   * of wasting the arrow the first time that stench square is encountered and go back unless it is the starting
+   * square. If the stench square is being encountered after the first time, then pinpoint the wumpus
    * by shooting at one of the 2 potential positions and noting the result: hit or miss. If the arrow hit (and a
    * scream is observed), then the wumpus is dead. Yay! If the arrow missed, then eliminate the position that was
    * shot at and conclude that the wumpus is in the other position. Hence, find the wumpus and flag that square as
    * unsafe. The downside here is that the arrow is used up in the case of a miss, and the wumpus can never be
    * killed despite being found. Else (if exactly 3 potential wumpus positions are computed), then don't take any
    * chances and simply turn back and go that way.
-   * @param withBreeze a boolean value indicating whether I am hunting the wumpus while observing a breeze
+   * @param withBreeze a boolean value indicating whether I am hunting the wumpus while perceiving a breeze
    */
   private def huntWumpus(withBreeze: Boolean): Unit =
     val wumpusPositions = maybeWumpusSquares // compute potential wumpus positions
@@ -216,8 +218,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
           // flag the other square as unsafe.
           else
             flagWumpusUnsafe()
-            if withBreeze then actionQueue.enqueue(Action.NO_OP)
-            else explore()
+            if !withBreeze then explore()
+            else actionQueue.enqueue(Action.NO_OP) // execute NO_OP
         else actionToMovementSequence(Action.NO_OP) // go back
       case _ => // case: exactly 3 potential wumpus positions
         // if the wumpus cannot be pinpointed, don't take chances and
@@ -319,7 +321,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    *
    * Note:- In general, if there is a unique max probability then it is not necessarily a pit.
    * But if there is a unique max probability and another nonzero probability, then the max
-   * probability is a pit.
+   * probability is assumed to be a pit.
    *
    * The filters:- neighbors -> keep least likely pits (since turning back is an option,
    * there is at least one 0-probability square) -> remove the option of turning back ->
@@ -465,8 +467,6 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
             if wumpusFound then handleBreeze()
             else huntWumpus(true) // hunt with breeze
         case (_, false, false, false, true) /* <_,none,none,none,scream> */ =>
-          // immediately occupy the wumpus' square to maximize exploration
-//          actionQueue.enqueue(Action.GO_FORWARD)
           explore()
         case (_, false, true, false, _) /* <_,none,breeze,none,_> */ =>
           // the only square without a 0-pit-probability neighbor is the starting square
