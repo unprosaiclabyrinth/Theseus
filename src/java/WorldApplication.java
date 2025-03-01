@@ -159,8 +159,8 @@ class WorldApplication {
 
 			    wumpusEnvironment = new Environment(worldSize, wumpusWorld, outputWriter);
 
-//		    	System.runFinalization();
-				ModelBasedReflexAgent.erase(); // reset MRA
+				// Reset agents
+				ModelBasedReflexAgent.reset(); // reset MRA
 		    }
 
 		    for (int i = 0; i < numTrials; i++) {
