@@ -110,7 +110,6 @@ class WorldApplication {
 	    try {
 	    	
 		    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(outFilename));
-			BufferedWriter scoreWriter = new BufferedWriter(new FileWriter("wumpus_eval.txt"));
 	    
 			System.out.println("Wumpus-Lite " + VERSION + "\n");
 			outputWriter.write("Wumpus-Lite " + VERSION + "\n\n");
@@ -168,7 +167,6 @@ class WorldApplication {
 		    	
 		    	System.out.println("Trial " + (i+1) + " score: " + trialScores[i]);
 		    	outputWriter.write("Trial " + (i+1) + " score: " + trialScores[i] + "\n");
-				scoreWriter.write(trialScores[i] + "\n");
 		    	totalScore += trialScores[i];
 		    	
 		    }
@@ -180,8 +178,6 @@ class WorldApplication {
 		    outputWriter.write("Average Score: " + ((double)totalScore/(double)numTrials) + "\n");
 		    
 		    outputWriter.close();
-			scoreWriter.close();
-		    
 	    }
 	    catch (Exception e) {
 	    	System.out.println("An exception was thrown: " + e);
