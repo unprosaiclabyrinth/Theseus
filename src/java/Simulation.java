@@ -18,23 +18,20 @@
 import java.io.BufferedWriter;
 
 class Simulation {
-	
 	private int currScore = 0;
-	private static int actionCost = -1;
-	private static int deathCost = -1000;
-	private static int shootCost = -10;
-	private int stepCounter = 0;
-	private int lastAction = 0;
+	private static final int actionCost = -1;
+	private static final int deathCost = -1000;
+	private static final int shootCost = -10;
+    private int lastAction = 0;
 	
 	private boolean simulationRunning;
 	
-	private Agent agent;
-	private Environment environment;
-	private TransferPercept transferPercept;
-	private BufferedWriter outputWriter;
+	private final Agent agent;
+	private final Environment environment;
+	private final TransferPercept transferPercept;
+	private final BufferedWriter outputWriter;
 	
 	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, boolean nonDeterministic) {
-		
 		// start the simulator
 		simulationRunning = true;
 		
@@ -50,12 +47,11 @@ class Simulation {
 		printCurrentPerceptSequence();
 		
 		try {
-		
 			System.out.println("Current score: " + currScore);
 			outputWriter.write("Current score: " + currScore + "\n");
-			
-			while (simulationRunning == true && stepCounter < maxSteps) {
-				
+
+            int stepCounter = 0;
+            while (simulationRunning && stepCounter < maxSteps) {
 				System.out.println("Last action: " + Action.printAction(lastAction));
 				outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
 				
@@ -65,7 +61,7 @@ class Simulation {
 				handleAction(agent.chooseAction());
 				wumpusEnvironment.placeAgent(agent);
 				
-				environment.printEnvironment();								
+				environment.printEnvironment();
 				printCurrentPerceptSequence();
 								
 				System.out.println("Current score: " + currScore);
@@ -76,7 +72,7 @@ class Simulation {
 				
 				stepCounter += 1;
 				
-				if (stepCounter == maxSteps || simulationRunning == false) {
+				if (stepCounter == maxSteps || !simulationRunning) {
 					System.out.println("Last action: " + Action.printAction(lastAction));
 					outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
 					
@@ -86,30 +82,25 @@ class Simulation {
 					lastAction = Action.END_TRIAL;
 				}
 				
-				if (agent.getHasGold() == true) {
+				if (agent.getHasGold()) {
 					System.out.println("\n" + agent.getName() + " found the GOLD!!");
 					outputWriter.write("\n" + agent.getName() + " found the GOLD!!\n");
 				}
-				if (agent.getIsDead() == true) {
+				if (agent.getIsDead()) {
 					System.out.println("\n" + agent.getName() + " is DEAD!!");
 					outputWriter.write("\n" + agent.getName() + " is DEAD!!\n");	
 				}
-				
 			}
-			
 		}
 		catch (Exception e) {
 			System.out.println("An exception was thrown: " + e);
-		}		
-		
+		}
+
 		printEndWorld();
-		
 	}
 	
 	public void printEndWorld() {
-		
 		try {
-			
 			environment.printEnvironment();
 			
 			System.out.println("Final score: " + currScore);
@@ -117,166 +108,135 @@ class Simulation {
 			
 			System.out.println("Last action: " + Action.printAction(lastAction));
 			outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
-
 		}
 		catch (Exception e) {
 			System.out.println("An exception was thrown: " + e);
 		}
-		
 	}
 	
 	public void printCurrentPerceptSequence() {
-		
 		try {
-		
 			System.out.print("Percept: <");	
 			outputWriter.write("Percept: <");
 			
-			if (transferPercept.getBump() == true) {
+			if (transferPercept.getBump()) {
 				System.out.print("bump,");
 				outputWriter.write("bump,");
-			}
-			else if (transferPercept.getBump() == false) {
+			} else if (!transferPercept.getBump()) {
 				System.out.print("none,");
 				outputWriter.write("none,");
 			}
-			if (transferPercept.getGlitter() == true) {
+
+			if (transferPercept.getGlitter()) {
 				System.out.print("glitter,");
 				outputWriter.write("glitter,");
-			}
-			else if (transferPercept.getGlitter() == false) {
+			} else if (!transferPercept.getGlitter()) {
 				System.out.print("none,");
 				outputWriter.write("none,");
 			}
-			if (transferPercept.getBreeze() == true) {
+
+			if (transferPercept.getBreeze()) {
 				System.out.print("breeze,");
 				outputWriter.write("breeze,");
-			}
-			else if (transferPercept.getBreeze() == false) {
+			} else if (!transferPercept.getBreeze()) {
 				System.out.print("none,");
 				outputWriter.write("none,");
 			}
-			if (transferPercept.getStench() == true) {
+
+			if (transferPercept.getStench()) {
 				System.out.print("stench,");
 				outputWriter.write("stench,");
-			}
-			else if (transferPercept.getStench() == false) {
+			} else if (!transferPercept.getStench()) {
 				System.out.print("none,");
 				outputWriter.write("none,");
 			}
-			if (transferPercept.getScream() == true) {
+
+			if (transferPercept.getScream()) {
 				System.out.print("scream>\n");
 				outputWriter.write("scream>\n");
-			}
-			else if (transferPercept.getScream() == false) {
+			} else if (!transferPercept.getScream()) {
 				System.out.print("none>\n");
 				outputWriter.write("none>\n");
 			}
-		
 		}
 		catch (Exception e) {
 			System.out.println("An exception was thrown: " + e);
 		}
-		
 	}
 	
 	public void handleAction(int action) {
-		
 		try {
-		
 			if (action == Action.GO_FORWARD) {
-				
-				if (environment.getBump() == true) environment.setBump(false);
+				if (environment.getBump()) environment.setBump(false);
 				
 				agent.goForward();
 				environment.placeAgent(agent);
 				
-				if (environment.checkDeath() == true) {
-					
+				if (environment.checkDeath()) {
 					currScore += deathCost;
 					simulationRunning = false;
 					
 					agent.setIsDead(true);
-				}
-				else {
+				} else {
 					currScore += actionCost;
 				}
 				
-				if (environment.getScream() == true) environment.setScream(false);
+				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.GO_FORWARD;
-			}
-			else if (action == Action.TURN_RIGHT) {
-				
+			} else if (action == Action.TURN_RIGHT) {
 				currScore += actionCost;
-				agent.turnRight();		
+				agent.turnRight();
 				environment.placeAgent(agent);
 				
-				if (environment.getBump() == true) environment.setBump(false);
-				if (environment.getScream() == true) environment.setScream(false);
+				if (environment.getBump()) environment.setBump(false);
+				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.TURN_RIGHT;
-			}
-			else if (action == Action.TURN_LEFT) {
-				
+			} else if (action == Action.TURN_LEFT) {
 				currScore += actionCost;
-				agent.turnLeft();		
+				agent.turnLeft();
 				environment.placeAgent(agent);
 				
-				if (environment.getBump() == true) environment.setBump(false);
-				if (environment.getScream() == true) environment.setScream(false);
+				if (environment.getBump()) environment.setBump(false);
+				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.TURN_LEFT;
-			}
-			else if (action == Action.GRAB) {
-				
-				if (environment.grabGold() == true) {
-					
+			} else if (action == Action.GRAB) {
+				if (environment.grabGold()) {
 					currScore += 1000;
 					simulationRunning = false;
 					
 					agent.setHasGold(true);
-				}
-				else currScore += actionCost;
+				} else currScore += actionCost;
 				
 				environment.placeAgent(agent);
 				
-				if (environment.getBump() == true) environment.setBump(false);
-				if (environment.getScream() == true) environment.setScream(false);
+				if (environment.getBump()) environment.setBump(false);
+				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.GRAB;
-			}
-			else if (action == Action.SHOOT) {
-				
-				if (agent.shootArrow() == true) {
-					
-					if (environment.shootArrow() == true) environment.setScream(true);
-				
-					currScore += shootCost;					
-				}
-				else {
-					
-					if (environment.getScream() == true) environment.setScream(false);
-					
+			} else if (action == Action.SHOOT) {
+				if (agent.shootArrow()) {
+					if (environment.shootArrow()) environment.setScream(true);
+					currScore += shootCost;
+				} else {
+					if (environment.getScream()) environment.setScream(false);
 					currScore += actionCost;
 				}
 				
 				environment.placeAgent(agent);
 				
-				if (environment.getBump() == true) environment.setBump(false);
-				
+				if (environment.getBump()) environment.setBump(false);
 				lastAction = Action.SHOOT;
-			}
-			else if (action == Action.NO_OP) {
-				
+			} else if (action == Action.NO_OP) {
 				environment.placeAgent(agent);
 				
-				if (environment.getBump() == true) environment.setBump(false);
-				if (environment.getScream() == true) environment.setScream(false);
+				if (environment.getBump()) environment.setBump(false);
+				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.NO_OP;
 			}
-			
 		}
 		catch (Exception e) {
 			System.out.println("An exception was thrown: " + e);
@@ -284,9 +244,6 @@ class Simulation {
 	}
 	
 	public int getScore() {
-		
 		return currScore;
-		
 	}
-	
 }

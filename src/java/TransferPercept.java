@@ -17,13 +17,10 @@
  */
 
 class TransferPercept {
-	
-	private Environment environment;
+	private final Environment environment;
 		
 	public TransferPercept(Environment wumpusEnvironment) {
-		
 		environment = wumpusEnvironment;
-		
 	}
 	
 	public boolean getBump() {
@@ -45,5 +42,4 @@ class TransferPercept {
 	public boolean getScream() {
 		return environment.getScream();
 	}
-	
 }

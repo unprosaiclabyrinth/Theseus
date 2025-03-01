@@ -16,8 +16,7 @@
  */
 
 class Action {
-	
-	public static int START_TRIAL = 0;
+//	public static int START_TRIAL = 0;
 	public static int GO_FORWARD = 1;
 	public static int TURN_RIGHT = 2;
 	public static int TURN_LEFT = 3;
@@ -27,22 +26,18 @@ class Action {
 	public static int END_TRIAL = 7;
 	
 	public Action() {
-		
 		// nothing to construct...
-		
 	}
 	
 	public static String printAction(int action) {
-		
-		if (action == 0) return "START_TRIAL";
-		else if (action == 1) return "GO_FORWARD";
-		else if (action == 2) return "TURN_RIGHT";
-		else if (action == 3) return "TURN_LEFT";
-		else if (action == 4) return "GRAB";
-		else if (action == 5) return "SHOOT";
-		else if (action == 6) return "NO_OP";
-		else return "END_TRIAL";
-		
+		return switch (action) {
+			case 0 -> "START_TRIAL";
+			case 1 -> "GO_FORWARD";
+			case 2 -> "TURN_RIGHT";
+			case 3 -> "TURN_LEFT";
+			case 4 -> "GRAB";
+			case 5 -> "SHOOT";
+			default -> "END_TRIAL";
+		};
 	}
-	
 }
