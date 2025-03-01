@@ -57,4 +57,4 @@ The agent architectures are generally evaluated on their average score after 10,
 ```zsh
 make tenk
 ```
-**Note that the above command runs 10,000 trials for the *current* implementation.** Feel free to run your own trials. The recipe for `make` target `tenk` can be copied from the Makefile and the `-t` parameter can be changed to the desired number of trials. The score for each trial and the average score is written to "wumpus_out.txt" or the output file you specified using option `-f`.
+**Note that the above command runs 10,000 trials for the *current* implementation.** Feel free to run your own trials. The recipe for the `make` target `tenk` can be copied from the Makefile and the `-t` parameter can be changed to the desired number of trials. The score for each trial and the average score is written to "wumpus_out.txt" or the output file you specified using option `-f`.
