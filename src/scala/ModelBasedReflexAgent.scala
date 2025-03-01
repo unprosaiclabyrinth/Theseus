@@ -47,7 +47,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   /**
    * Respawn the agent. Reset the model. Forget all information and knowledge.
    */
-  def reset(): Unit =
+  override def reset(): Unit =
     agentPosition = (1, 1)
     agentDirection = Direction.East
     hasArrow = true

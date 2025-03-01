@@ -132,5 +132,8 @@ trait AgentFunctionImpl:
       weightedActions.flatMap((action, p) => List.fill(theLcm * p.numer / p.denom)(action)).toList
     )
 
+  // Method that resets the agent in case of multiple trials
+  def reset(): Unit
+  
   // Method that returns an action given the percepts. Implemented by agents.
   def process(tp: TransferPercept): Int

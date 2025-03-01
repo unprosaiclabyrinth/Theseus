@@ -10,6 +10,11 @@
 
 object SimpleReflexAgent extends AgentFunctionImpl:
   /**
+   * Nothing to be done to reset the SRA.
+   */
+  override def reset(): Unit = {/* nothing to be done */}
+  
+  /**
    * This function returns the action to be executed by the SRA given the percepts.
    * f_SRA: P -> A
    * @param tp percepts
