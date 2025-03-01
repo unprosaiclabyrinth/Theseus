@@ -45,6 +45,7 @@ The project was tested using:-
 return CustomAgent.process(tp) // specify agent
 ```
 3. Make sure that you have copied the comment verbatim and have ended the line with it.
+4. Make sure to override and define the `reset` method for your agent and reset it if necessary in WorldApplication.java just under line 162.
 4. Run `make run` to run the agent. This will not break the `sra` and `mra` targets.
 
 # Design
