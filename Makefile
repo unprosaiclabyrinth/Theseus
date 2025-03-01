@@ -36,8 +36,8 @@ build: clean
 run: build
 	@scala run -cp target --main-class WorldApplication -- -n false -a false
 
-tenk: build eval10k.jl
-	JULIA_NUM_THREADS=10 time julia eval10k.jl
+tenk: build
+	@scala run -cp target --main-class WorldApplication -- -n false -a false -t 10000
 
 # Clean the project
 clean:
