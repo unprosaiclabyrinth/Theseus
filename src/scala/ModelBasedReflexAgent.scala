@@ -29,20 +29,20 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private var agentPosition: Position = (1, 1) // the agent's current position
   private var agentDirection: Direction = Direction.East // the agent's current direction
 
-  private var hasArrow: Boolean = true // a boolean value indicating whether the agent has shot
+  private var hasArrow: Boolean = true // does the agent have the arrow?
   private var numFoundPits: Int = 0 // number of pits whose positions have been found; can be 0, 1, or 2
-  private var givenUp: Boolean = false // a boolean value indicating whether the agent has given up
+  private var givenUp: Boolean = false // has the agent given up?
 
   private val unsafeSquares: mutable.Set[(Position, UnsafeTag)] = mutable.Set.empty // pit/wumpus positions that are found
   private val exploredOrientationCounts: mutable.Map[(Position, Direction), Int] = mutable.Map.empty // pos, dir -> count
-  private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // set of squares where a stench is observed
-  private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares where a breeze is observed
-  private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares that definitely don't have the wumpus
-  private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // set of squares that definitely don't have a pit
+  private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // stench is observed here
+  private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // breeze is observed here
+  private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // no wumpus here 100%
+  private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // no pit here 100%
   private var pitCombinations: Set[Set[Position]] = Set.empty // set of 2-tuples of possible positions of 2 pits
   /*-----------------*/
 
-  private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty // contains actions to execute
+  private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty // queues actions to execute
 
   /**
    * Respawn the agent. Reset the model. Forget all information and knowledge.
@@ -125,8 +125,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     else actionQueue.enqueue(action) // action = GO_FORWARD
 
   /**
-   * Private helper to maximize the agent's exploration of the wumpus world by chossing the least
-   * explored neighbor. If there are muliple least explored neighbors, then prefer edge squares.
+   * Private helper to maximize the agent's exploration of the wumpus world by choosing the least
+   * explored neighbor. If there are multiple least explored neighbors, then prefer edge squares.
    * @param nextSquares a pre-computed collection of potential next squares which the agent can go to.
    */
   private def maximizeExploration(nextSquares: Map[Position, Int]): Unit =
@@ -149,8 +149,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     else actionToMovementSequence(Action.NO_OP)
 
   /**
-   * Explore the world freely in case of no `breeze` or `stench` since there is nothing to be afraid of!
-   * Basically, don't turn back and maximize exploration.
+   * Explore the world freely. Basically, don't turn back and maximize exploration.
    */
   private def explore(): Unit =
     // neighbors func will not return unsafe squares
@@ -159,9 +158,9 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     maximizeExploration(neighborsMap(agentPosition))
 
   /**
-   * Identify potential wumpus positions using the current knowledge of stenchSquares and safeSquares.
-   * Since there is only one wumpus, the intersection of neighborsSets of all stenchSquares minus all
-   * the safeSquares should give potential wumpus positions.
+   * Identify potential wumpus positions using the current knowledge of `stenchSquares` and
+   * `wumpusFreeSquares`. Since there is only one wumpus, the intersection of neighborsSets of
+   * all `stenchSquares` minus all the `wumpusFreeSquares` should give potential wumpus positions.
    * @return a set of potential wumpus positions.
    */
   private def maybeWumpusSquares: Set[Position] =
@@ -191,21 +190,21 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private def wumpusFound: Boolean = unsafeSquares.exists((_, tag) => tag == UnsafeTag.Wumpus)
 
   /**
-   * huntWumpus is called when:-
+   * `huntWumpus` is called when:-
    * (1) the agent observes a stench (i.e. the wumpus is alive),
    * (2) the wumpus is not found.
-   * Compute the potential wumpus positions, which could be 1, 2, or 3 in number. If only 1 potential wumpus
+   * Compute the potential wumpus positions, which could be 1, 2, or 3 in number. If exactly 1 potential wumpus
    * position is computed, then the wumpus is pinpointed and is in an agent's neighboring square. Hence, shoot
    * with a 100% hit rate. Else if exactly 2 potential wumpus positions are computed, then don't take a chance
    * of wasting the arrow the first time that stench square is encountered and go back unless it is the starting
-   * square. If the stench square is being encountered after the first time, then pinpoint the wumpus
-   * by shooting at one of the 2 potential positions and noting the result: hit or miss. If the arrow hit (and a
-   * scream is observed), then the wumpus is dead. Yay! If the arrow missed, then eliminate the position that was
-   * shot at and conclude that the wumpus is in the other position. Hence, find the wumpus and flag that square as
+   * square. If the stench square is being encountered after the first time, then pinpoint the wumpus by shooting
+   * at one of the 2 potential positions and noting the result: hit or miss. If the arrow hit (and a scream was
+   * observed), then the wumpus is dead. Yay! If the arrow missed, then eliminate the position that was shot at
+   * and conclude that the wumpus is in the other position. Hence, find the wumpus and flag that square as
    * unsafe. The downside here is that the arrow is used up in the case of a miss, and the wumpus can never be
    * killed despite being found. Else (if exactly 3 potential wumpus positions are computed), then don't take any
    * chances and simply turn back and go that way.
-   * @param withBreeze a boolean value indicating whether I am hunting the wumpus while perceiving a breeze
+   * @param withBreeze a boolean value indicating whether there is breeze while hunting the wumpus
    */
   private def huntWumpus(withBreeze: Boolean): Unit =
     val wumpusPositions = maybeWumpusSquares // compute potential wumpus positions
@@ -284,7 +283,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     )
 
   /**
-   * Update possible pitCombinations based on safeSquares and breezeSquares knowledge.
+   * Update possible `pitCombinations` based on `pitFreeSquares` and `breezeSquares` knowledge.
    */
   private def updatePitCombinations(): Unit =
     val allSquares = (1 to 4).flatMap(x => (1 to 4).flatMap(y => Set((x, y)))).toSet
@@ -328,8 +327,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
           println(s"\"Yay! PIT found @ $pitPos.\"")
           unsafeSquares += ((pitPos, UnsafeTag.Pit))
           numFoundPits += 1
-        else { /* do nothing */ }
-      case _ => /* do nothing */
+        else { /* nothing to be done */ }
+      case _ => /* nothing to be done */
     }
 
   /**
@@ -390,7 +389,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
       goToZeroLikelyPit()
 
   /**
-   * Private helper that updates the agent's model (position, direction, hasArrow) based on an action.
+   * Private helper that updates the agent's model (position, direction, `hasArrow`) based on an action.
    * @param action an action executed by the agent.
    * @return the same action after updating the agent's model.
    */
