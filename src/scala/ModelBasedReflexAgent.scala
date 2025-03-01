@@ -45,6 +45,23 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty // contains actions to execute
 
   /**
+   * Respawn the agent. Reset the model. Forget all information and knowledge.
+   */
+  def erase(): Unit =
+    agentPosition = (1, 1)
+    agentDirection = Direction.East
+    hasArrow = true
+    numFoundPits = 0
+    givenUp = false
+    unsafeSquares.clear()
+    exploredOrientationCounts.clear()
+    stenchSquares.clear()
+    breezeSquares.clear()
+    wumpusFreeSquares.clear()
+    pitFreeSquares.clear()
+    pitCombinations = Set.empty
+
+  /**
    * Compute all "neighbors" of a given square along with an action that will get the agent there
    * from the given square. A "neighbor" of a square is a square adjacent to it but not diagonally
    * adjacent. If a square satisfying the adjacency condition is known to be unsafe with 100% certainty
