@@ -160,6 +160,7 @@ class WorldApplication {
 			    wumpusEnvironment = new Environment(worldSize, wumpusWorld, outputWriter);
 
 				// Reset agents
+				SimpleReflexAgent.reset(); // reset SRA
 				ModelBasedReflexAgent.reset(); // reset MRA
 		    }
 
