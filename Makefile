@@ -37,7 +37,7 @@ run: build
 	@scala run -cp target --main-class WorldApplication -- -n false -a false
 
 tenk: build
-	@scala run -cp target --main-class WorldApplication -- -n false -a false -t 10000
+	@scala run -cp target --main-class WorldApplication -- -n false -a false -t 10000 > /dev/null
 
 # Clean the project
 clean:
