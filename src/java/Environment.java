@@ -61,8 +61,8 @@ class Environment {
 		setPerceptMap();
 		
 		// create divider bar for display output
-//		bar = "-".repeat((6 * worldSize) - 1);
-        bar = "-----+".repeat(worldSize);
+		bar = "-".repeat((6 * worldSize) - 1);
+		// bar = "-----+".repeat(worldSize);
 	}
 	
 	public int getWorldSize() {
