@@ -108,8 +108,8 @@ trait AgentFunctionImpl:
     case North, South, East, West
 
   // Tags for special unsafe squares
-  enum Tag:
-    case Gold, Wumpus, Pit
+  enum UnsafeTag:
+    case Wumpus, Pit
 
   // A position in the wumpus world grid
   type Position = (Int, Int) // x, y
