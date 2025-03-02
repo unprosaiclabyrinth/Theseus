@@ -10,16 +10,6 @@
 import scala.collection.mutable
 
 object ModelBasedReflexAgent extends AgentFunctionImpl:
-  // North is on top
-  private enum Direction:
-    case North, South, East, West
-
-  private enum UnsafeTag:
-    case Wumpus, Pit
-
-  private type Position = (Int, Int) // x, y
-
-  /*---World model---*/
   // The give up point is when the agent concludes that the gold is unreachable and gives up,
   // that is just keeps NO_OPing. If the agent reaches a particular orientation more than this
   // number of times, then most likely it is stuck in a loop and the gold is unreachable.
@@ -40,7 +30,6 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // no wumpus here 100%
   private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // no pit here 100%
   private var pitCombinations: Set[Set[Position]] = Set.empty // set of 2-tuples of possible positions of 2 pits
-  /*-----------------*/
 
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty // queues actions to execute
 

@@ -103,6 +103,17 @@ trait AgentFunctionImpl:
      */
     override def toString: String = f"${100 * numer.toFloat/denom.toFloat}%.3f" + "%"
 
+  // North is on top
+  enum Direction:
+    case North, South, East, West
+
+  // Tags for unsafe squares
+  enum UnsafeTag:
+    case Wumpus, Pit
+
+  // A position in the wumpus world grid
+  type Position = (Int, Int) // x, y
+
   /**
    * Private helper method that chooses an element randomly from a list by doing a
    * random shuffle and choosing the first element. The shuffle is a Fisher-Yates
