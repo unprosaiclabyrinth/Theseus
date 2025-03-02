@@ -10,6 +10,10 @@
 import scala.collection.mutable
 
 object ModelBasedReflexAgent extends AgentFunctionImpl:
+  // Tags for special unsafe squares
+  private enum UnsafeTag:
+    case Wumpus, Pit
+
   // The give up point is when the agent concludes that the gold is unreachable and gives up,
   // that is just keeps NO_OPing. If the agent reaches a particular orientation more than this
   // number of times, then most likely it is stuck in a loop and the gold is unreachable.
