@@ -23,7 +23,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private var numFoundPits: Int = 0 // number of pits whose positions have been found; can be 0, 1, or 2
   private var givenUp: Boolean = false // has the agent given up?
 
-  private val unsafeSquares: mutable.Set[(Position, UnsafeTag)] = mutable.Set.empty // pit/wumpus positions that are found
+  private val unsafeSquares: mutable.Set[(Position, Tag)] = mutable.Set.empty // pit/wumpus positions that are found
   private val exploredOrientationCounts: mutable.Map[(Position, Direction), Int] = mutable.Map.empty // pos, dir -> count
   private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // stench is observed here
   private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // breeze is observed here
@@ -168,7 +168,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     maybeWumpusSquares.find(neighborsMap(agentPosition)(_) != Action.GO_FORWARD) match {
       case Some(wumpusPos) =>
         println(s"\"Yay! WUMPUS found @ $wumpusPos.\"")
-        unsafeSquares += ((wumpusPos, UnsafeTag.Wumpus))
+        unsafeSquares += ((wumpusPos, Tag.Wumpus))
       case None => assert(false, "This is not possible") // should be dead code
     }
 
@@ -176,7 +176,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
    * Private helper that checks for the existence of an unsafe square tagged Wumpus.
    * @return a boolean value indicating whether the wumpus has been found.
    */
-  private def wumpusFound: Boolean = unsafeSquares.exists((_, tag) => tag == UnsafeTag.Wumpus)
+  private def wumpusFound: Boolean = unsafeSquares.exists((_, tag) => tag == Tag.Wumpus)
 
   /**
    * `huntWumpus` is called when:-
@@ -282,7 +282,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     val allCombinations: Set[Set[Position]] = candidateSquares.toList
       .combinations(2).toSet.map(_.toSet)
     // compute set of all pit positions that have been found
-    val allFoundPits: Set[Position] = unsafeSquares.filter(_._2 == UnsafeTag.Pit).map(_._1).toSet
+    val allFoundPits: Set[Position] = unsafeSquares.filter(_._2 == Tag.Pit).map(_._1).toSet
 
     // filter allCombinations to find possible pitCombinations based on the condition that:-
     // breezeSquares is a subset of the union of the neighborSets of the 2 squares and the
@@ -306,7 +306,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         pitCombinations.head.foreach(pitPos =>
           if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
             println(s"\"Yay! PIT found @ $pitPos.\"")
-            unsafeSquares += ((pitPos, UnsafeTag.Pit))
+            unsafeSquares += ((pitPos, Tag.Pit))
         )
         numFoundPits = 2
       case 1 => // if one position is common between all 2-tuples, that is definitely a pit
@@ -314,7 +314,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         val pitPos = pits.head
         if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
           println(s"\"Yay! PIT found @ $pitPos.\"")
-          unsafeSquares += ((pitPos, UnsafeTag.Pit))
+          unsafeSquares += ((pitPos, Tag.Pit))
           numFoundPits += 1
         else { /* nothing to be done */ }
       case _ => /* nothing to be done */
@@ -348,7 +348,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
           neighbors.find(pitProbability(_) == maxVal) match {
             case Some(pitPos) =>
               println(s"\"Yay! PIT found @ $pitPos.\"")
-              unsafeSquares += ((pitPos, UnsafeTag.Pit))
+              unsafeSquares += ((pitPos, Tag.Pit))
               numFoundPits += 1
             case None => /* continue */
           }
@@ -369,7 +369,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
   private def handleBreeze(): Unit =
     if numFoundPits == 2 then explore()
     // If pit found @ (2,2) and I am stuck in that little infinite loop
-    else if unsafeSquares.contains((2, 2), UnsafeTag.Pit) &&
+    else if unsafeSquares.contains((2, 2), Tag.Pit) &&
       exploredOrientationCounts.keySet.map(_._1) == Set((1, 1), (1, 2), (2, 1)) then
       // Take a chance and go forward
       actionQueue.enqueue(Action.GO_FORWARD)
