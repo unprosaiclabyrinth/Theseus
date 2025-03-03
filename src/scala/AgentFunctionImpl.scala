@@ -6,6 +6,7 @@
  *
  */
 import scala.annotation.{tailrec, targetName}
+import scala.math.abs
 import scala.util.Random.shuffle
 
 trait AgentFunctionImpl:
@@ -24,7 +25,7 @@ trait AgentFunctionImpl:
    * @param b a positive integer.
    * @return the lowest common multiple of a and b using lcm = ab/gcd.
    */
-  private def lcm(a: Int, b: Int): Int = (a * b) / gcd(a, b)
+  private def lcm(a: Int, b: Int): Int = abs(a * b) / gcd(a, b)
 
   /**
    * A custom implementation of rational numbers to avoid floating-point imprecision.
@@ -32,12 +33,12 @@ trait AgentFunctionImpl:
    * @param d denominator.
    */
   class Rational(n: Int, d: Int) extends Ordered[Rational]:
-    require(d > 0)
+    require(d != 0, "Denominator = 0.")
 
     // Reduce the fraction to the lowest terms and
     // make the new numerator and denominator available publicly
-    private val hcf: Int = gcd(n, d)
-    val numer: Int = n / hcf
+    private val hcf: Int = gcd(abs(n), abs(d))
+    val numer: Int = if d < 0 then -n / hcf else n / hcf
     val denom: Int = d / hcf
 
     /**
@@ -56,9 +57,21 @@ trait AgentFunctionImpl:
      * @param that the other addend.
      * @return a Rational with value (this + that).
      */
-    @targetName("addProbabilities")
-    def +(that: Probability): Probability = Probability(
+    @targetName("addRationals")
+    def +(that: Rational): Rational = Rational(
       (this.numer * that.denom) + (that.numer * this.denom),
+      this.denom * that.denom
+    )
+
+    /**
+     * Allow subtraction using `-` of Rationals.
+     *
+     * @param that the other subtrahend.
+     * @return a Rational with value (this - that).
+     */
+    @targetName("subtractRationals")
+    def -(that: Rational): Rational = Rational(
+      (this.numer * that.denom) - (that.numer * this.denom),
       this.denom * that.denom
     )
 
@@ -67,8 +80,8 @@ trait AgentFunctionImpl:
      * @param that the multiplier.
      * @return a Rational with value (this * that).
      */
-    @targetName("multiplyProbabilities")
-    def *(that: Probability): Probability = Probability(
+    @targetName("multiplyRationals")
+    def *(that: Rational): Rational = Rational(
       this.numer * that.numer,
       this.denom * that.denom
     )
@@ -78,10 +91,10 @@ trait AgentFunctionImpl:
      * @param that the divisor.
      * @return a Rational with the value (this / that).
      */
-    @targetName("divideProbabilites")
-    def /(that: Probability): Probability =
-      require(that != Probability(0, 1), "Division by 0.")
-      Probability(this.numer * that.denom, this.denom * that.numer)
+    @targetName("divideRationals")
+    def /(that: Rational): Rational =
+      require(that != Rational(0, 1), "Division by 0.")
+      Rational(this.numer * that.denom, this.denom * that.numer)
 
     /**
      * Allow comparison using `<`/`>`(`=`), of Rationals and, in turn, sorting.
@@ -104,7 +117,41 @@ trait AgentFunctionImpl:
     override def toString: String = f"${100 * numer.toFloat/denom.toFloat}%.3f" + "%"
 
   // Class of rational probabilities
-  case class Probability(n: Int, d: Int) extends Rational(n, d)
+  case class Probability(n: Int, d: Int) extends Rational(n, d):
+    /**
+     * Allow addition using `+` of Probabilities to return a Probability.
+     *
+     * @param that the other addend.
+     * @return a Probability with value (this + that).
+     */
+    @targetName("addProbabilities")
+    def +(that: Probability): Probability = Probability(
+      (this.numer * that.denom) + (that.numer * this.denom),
+      this.denom * that.denom
+    )
+
+    /**
+     * Allow multiplication using `*` of Probabilities to return a Probability.
+     *
+     * @param that the multiplier.
+     * @return a Probability with value (this * that).
+     */
+    @targetName("multiplyProbabilities")
+    def *(that: Probability): Probability = Probability(
+      this.numer * that.numer,
+      this.denom * that.denom
+    )
+
+    /**
+     * Allow division using `/` of Probabilities to return a Probability.
+     *
+     * @param that the divisor.
+     * @return a Probability with the value (this / that).
+     */
+    @targetName("divideProbabilities")
+    def /(that: Probability): Probability =
+      require(that != Probability(0, 1), "Division by 0.")
+      Probability(this.numer * that.denom, this.denom * that.numer)
 
   // North is on top
   enum Direction:
