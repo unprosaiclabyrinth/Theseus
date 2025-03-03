@@ -65,7 +65,6 @@ trait AgentFunctionImpl:
 
     /**
      * Allow subtraction using `-` of Rationals.
-     *
      * @param that the other subtrahend.
      * @return a Rational with value (this - that).
      */
@@ -120,7 +119,6 @@ trait AgentFunctionImpl:
   case class Probability(n: Int, d: Int) extends Rational(n, d):
     /**
      * Allow addition using `+` of Probabilities to return a Probability.
-     *
      * @param that the other addend.
      * @return a Probability with value (this + that).
      */
@@ -132,7 +130,6 @@ trait AgentFunctionImpl:
 
     /**
      * Allow multiplication using `*` of Probabilities to return a Probability.
-     *
      * @param that the multiplier.
      * @return a Probability with value (this * that).
      */
@@ -144,7 +141,6 @@ trait AgentFunctionImpl:
 
     /**
      * Allow division using `/` of Probabilities to return a Probability.
-     *
      * @param that the divisor.
      * @return a Probability with the value (this / that).
      */
