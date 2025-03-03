@@ -149,10 +149,6 @@ trait AgentFunctionImpl:
       require(that != Probability(0, 1), "Division by 0.")
       Probability(this.numer * that.denom, this.denom * that.numer)
 
-  // North is on top
-  enum Direction:
-    case North, South, East, West
-
   // A position in the wumpus world grid
   type Position = (Int, Int) // x, y
 

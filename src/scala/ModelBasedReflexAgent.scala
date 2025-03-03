@@ -10,6 +10,10 @@
 import scala.collection.mutable
 
 object ModelBasedReflexAgent extends AgentFunctionImpl:
+  // North is on top
+  enum Direction:
+    case North, South, East, West
+
   // Tags for special unsafe squares
   private enum UnsafeTag:
     case Wumpus, Pit
