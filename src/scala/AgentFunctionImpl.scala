@@ -27,23 +27,23 @@ trait AgentFunctionImpl:
   private def lcm(a: Int, b: Int): Int = (a * b) / gcd(a, b)
 
   /**
-   * A custom implementation of rational probabilities to make computation simpler.
+   * A custom implementation of rational numbers to avoid floating-point imprecision.
    * @param n numerator.
    * @param d denominator.
    */
-  case class Probability(n: Int, d: Int) extends Ordered[Probability]:
+  class Rational(n: Int, d: Int) extends Ordered[Rational]:
     require(d > 0)
 
-    // Reduce the probability fraction to the lowest terms and
+    // Reduce the fraction to the lowest terms and
     // make the new numerator and denominator available publicly
     private val hcf: Int = gcd(n, d)
     val numer: Int = n / hcf
     val denom: Int = d / hcf
 
     /**
-     * Allow equality-checking using `==` and `!=` of Probabilities.
-     * @param obj the other Probability.
-     * @return a boolean whether this and that are equal..
+     * Allow equality-checking using `==` and `!=` of Rationals.
+     * @param obj the other Rational.
+     * @return a boolean whether this and that are equal.
      */
     override def equals(obj: Any): Boolean = obj match {
       case that: Probability =>
@@ -52,9 +52,9 @@ trait AgentFunctionImpl:
     }
 
     /**
-     * Allow addition using `+` of Probabilities.
+     * Allow addition using `+` of Rationals.
      * @param that the other addend.
-     * @return a Probability with value (this + that).
+     * @return a Rational with value (this + that).
      */
     @targetName("addProbabilities")
     def +(that: Probability): Probability = Probability(
@@ -63,9 +63,9 @@ trait AgentFunctionImpl:
     )
 
     /**
-     * Allow multiplication using `*` of Probabilities.
+     * Allow multiplication using `*` of Rationals.
      * @param that the multiplier.
-     * @return a Probability with value (this * that).
+     * @return a Rational with value (this * that).
      */
     @targetName("multiplyProbabilities")
     def *(that: Probability): Probability = Probability(
@@ -74,9 +74,9 @@ trait AgentFunctionImpl:
     )
 
     /**
-     * Allow division using `/` of Probabilities.
+     * Allow division using `/` of Rationals.
      * @param that the divisor.
-     * @return a Probability with the value (this / that).
+     * @return a Rational with the value (this / that).
      */
     @targetName("divideProbabilites")
     def /(that: Probability): Probability =
@@ -84,24 +84,27 @@ trait AgentFunctionImpl:
       Probability(this.numer * that.denom, this.denom * that.numer)
 
     /**
-     * Allow comparison using `<`/`>`(`=`), of Probabilities and, in turn, sorting.
-     * @param that the other Probability.
+     * Allow comparison using `<`/`>`(`=`), of Rationals and, in turn, sorting.
+     * @param that the other Rational.
      * @return the boolean result of the comparison.
      */
-    override def compare(that: Probability): Int =
+    override def compare(that: Rational): Int =
       (this.numer * that.denom) - (that.numer * this.denom)
 
     /**
-     * Allow hashing of Probabilities.
+     * Allow hashing of Rationals.
      * @return the hash code of the Probability object.
      */
     override def hashCode: Int = (numer, denom).##
 
     /**
-     * Allow Probabilities to be printed on screen.
-     * @return the string representation of the Probability.
+     * Allow Rationals to be printed on screen.
+     * @return the string representation of the Rational.
      */
     override def toString: String = f"${100 * numer.toFloat/denom.toFloat}%.3f" + "%"
+
+  // Class of rational probabilities
+  case class Probability(n: Int, d: Int) extends Rational(n, d)
 
   // North is on top
   enum Direction:
