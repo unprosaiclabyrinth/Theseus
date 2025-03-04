@@ -41,9 +41,11 @@ tenk: build
 	@scala run -cp target --main-class WorldApplication -- -n false -a false -t 10000 > /dev/null
 	@echo "Results in wumpus_out.txt"
 
-# Clean the project
+# Clean the project and junk backup files
+# If junk backups exist before build, then they are indeed junk
 clean:
 	@rm -rf target
+	@rm -rf src/java/*.orig
 
 # Phony targets
 .PHONY: sra mra check build run tenk clean
