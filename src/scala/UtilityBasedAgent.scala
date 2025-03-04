@@ -23,7 +23,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
                            hasArrow: Boolean,
                            wumpusIsAlive: Boolean,
                            gold: Position,
-                           wumpus: Position,
+                           wumpus: Option[Position],
                            pit1: Position,
                            pit2: Position)
 
@@ -44,24 +44,13 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty
 
   private var currentState: ObservableState = ObservableState((1, 1), Orientation.East, true, true)
-  private val perceptHistory: mutable.Map[ObservableState, TransferPercept] = mutable.Map.empty
   private val exploredPositionCounts: mutable.Map[Position, Int] = mutable.Map.empty // pos -> count
-//  private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // stench is observed here
-//  private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // breeze is observed here
-//  private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // no wumpus here 100%
-//  private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // no pit here 100%
+  private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // stench is observed here
+  private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // breeze is observed here
+  private val wumpusFreeSquares: mutable.Set[Position] = mutable.Set.empty // no wumpus here 100%
+  private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // no pit here 100%
 
   private def currentBeliefState: BeliefState =
-    // compute stenchSquares, breezeSquares, wumpusFreeSquares, pitFreeSquares
-    // essentially variables from the MRA, which cannot darn be dynamically updated since no condition-action rules
-    val stenchSquares = perceptHistory.filter(_._2.getStench).keySet.map(_.agentPosition)
-    val breezeSquares = perceptHistory.filter(_._2.getBreeze).keySet.map(_.agentPosition)
-    val wumpusFreeSquares = perceptHistory.filterNot(_._2.getStench).keySet.flatMap(
-      state => neighbors(state.agentPosition) + state.agentPosition
-    )
-    val pitFreeSquares = perceptHistory.filterNot(_._2.getBreeze).keySet.flatMap(
-      state => neighbors(state.agentPosition) + state.agentPosition
-    )
     val allSquares: Set[Position] = (1 to 4).flatMap(x => (1 to 4).map(y => (x, y))).toSet
 
     // 1. Pit possibilities
@@ -73,13 +62,16 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     }
 
     // 2. Wumpus possibilities
-    val possibleWumpusPositions: Set[Position] = (allSquares -- wumpusFreeSquares).filter(
-      stenchSquares subsetOf neighbors(_)
-    )
+    val possibleWumpusPositions: Set[Option[Position]] =
+      if currentState.wumpusIsAlive then (allSquares -- wumpusFreeSquares).filter(
+        stenchSquares subsetOf neighbors(_)
+      ).map(Some(_))
+      else Set(None)
 
     // 3. Gold possibilities
     // we're trusting the algorithm to always GRAB on glitter here
-    val possibleGoldLocations: Set[Position] = allSquares -- (exploredPositionCounts.keySet - currentState.agentPosition)
+    val possibleGoldLocations: Set[Position] =
+      allSquares -- (exploredPositionCounts.keySet diff Set(currentState.agentPosition))
 
     possiblePitCombinations.flatMap {
       case (pit1, pit2) =>
@@ -130,7 +122,12 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     }
 
   private def isTerminal(state: State): Boolean =
-    Set(state.wumpus, state.pit1, state.pit2).contains(state.agentPosition)
+    Set(state.pit1, state.pit2).contains(state.agentPosition) || {
+      state.wumpus match {
+        case Some(wumpus) => wumpus == state.agentPosition
+        case None => false // wumpus is dead
+      }
+    }
 
   private def possibleMoves(state: State): Set[Move] =
     if isTerminal(state) then Set.empty
@@ -151,11 +148,11 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     // designed in the potential style φ(s')-φ(s)
     // maximize exploration by favoring it
     val explorationFactor = 5
-    val h1 = -explorationFactor * (exploredPositionCounts.getOrElse(stateAfter.agentPosition, 0) -
+    val explorationValue = -explorationFactor * (exploredPositionCounts.getOrElse(stateAfter.agentPosition, 0) -
       exploredPositionCounts.getOrElse(stateBefore.agentPosition, 0)) // potential gradient towards new squares
     // favor killing the wumpus
-    val h2 = if stateBefore.wumpusIsAlive && !stateAfter.wumpusIsAlive then 100 else 0
-    h1 + h2
+    val wumpusDeadValue = if stateBefore.wumpusIsAlive && !stateAfter.wumpusIsAlive then 100 else 0
+    explorationValue + wumpusDeadValue
 
   private def reward(stateBefore: State, move: Move): Int =
     val stateAfter = transition(stateBefore, move)
@@ -181,7 +178,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       case Move.NoOp => 0
     }
 
-  private def value(beliefStateBefore: BeliefState, move: Move): Rational =
+  private def reward(beliefStateBefore: BeliefState, move: Move): Rational =
     // reward + heuristic
     beliefStateBefore.foldLeft(Rational(0, 1)) {
       case (acc, (s, p)) => acc + (p * Rational(reward(s, move) + heuristic(s, move), 1))
@@ -234,43 +231,48 @@ object UtilityBasedAgent extends AgentFunctionImpl:
           case Orientation.West => Orientation.East
         })
       case Move.Shoot if state.hasArrow =>
-        val (xW, yW) = state.wumpus
-        state.copy(wumpusIsAlive = state.agentOrientation match {
-          case Orientation.North => xW == x && yW > y
-          case Orientation.South => xW == x && yW < y
-          case Orientation.East => xW > x && yW == y
-          case Orientation.West => xW < x && yW == y
-        }, hasArrow = false)
+        state.wumpus match {
+          case Some((xW, yW)) =>
+            state.copy (wumpusIsAlive = state.agentOrientation match {
+              case Orientation.North => xW == x && yW > y
+              case Orientation.South => xW == x && yW < y
+              case Orientation.East => xW > x && yW == y
+              case Orientation.West => xW < x && yW == y
+            }, hasArrow = false)
+          case None => assert(false, "hasArrow and not wumpusIsAlive is not possible.")
+        }
       case Move.ShootRight if state.hasArrow =>
-        val (xW, yW) = state.wumpus
-        state.copy(wumpusIsAlive = state.agentOrientation match {
-          case Orientation.North => xW > x && yW == y
-          case Orientation.South => xW < x && yW == y
-          case Orientation.East => xW == x && yW < y
-          case Orientation.West => xW == x && yW > y
-        }, hasArrow = false)
+        state.wumpus match {
+          case Some((xW, yW)) =>
+            state.copy(wumpusIsAlive = state.agentOrientation match {
+              case Orientation.North => xW > x && yW == y
+              case Orientation.South => xW < x && yW == y
+              case Orientation.East => xW == x && yW < y
+              case Orientation.West => xW == x && yW > y
+            }, hasArrow = false)
+          case None => assert(false, "hasArrow and not wumpusIsAlive is not possible.")
+        }
       case Move.ShootLeft if state.hasArrow =>
-        val (xW, yW) = state.wumpus
-        state.copy(wumpusIsAlive = state.agentOrientation match {
-          case Orientation.North => xW < x && yW == y
-          case Orientation.South => xW > x && yW == y
-          case Orientation.East => xW == x && yW > y
-          case Orientation.West => xW == x && yW < y
-        }, hasArrow = false)
+        state.wumpus match {
+          case Some((xW, yW)) =>
+            state.copy(wumpusIsAlive = state.agentOrientation match {
+              case Orientation.North => xW < x && yW == y
+              case Orientation.South => xW > x && yW == y
+              case Orientation.East => xW == x && yW > y
+              case Orientation.West => xW == x && yW < y
+            }, hasArrow = false)
+          case None => assert(false, "hasArrow and not wumpusIsAlive is not possible.")
+        }
       case _ => state
     }
 
   private def transition(beliefState: BeliefState, move: Move): BeliefState =
     beliefState.groupMapReduce((s, p) => transition(s, move))(_._2)(_ + _)
 
-  private def observe(percept: TransferPercept): Unit =
-    // update the observable state based on the observation
-    currentState = currentState.copy(wumpusIsAlive = currentState.wumpusIsAlive && percept.getScream)
-
   private def execute(action: Int): Int =
     // Make a dummy state out of the current observable state
     val dummy: State = State(currentState.agentPosition, currentState.agentOrientation, currentState.hasArrow,
-      currentState.wumpusIsAlive, (0, 0), (0, 0), (0, 0), (0, 0))
+      currentState.wumpusIsAlive, (0, 0), None, (0, 0), (0, 0))
     // update the observable state based on the action
     currentState =
       if action == Action.GO_FORWARD then
@@ -284,13 +286,26 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       else currentState
     action
 
-  override def reset(): Unit = currentState = ObservableState((1, 1), Orientation.East, true, true)
+  override def reset(): Unit =
+    currentState = ObservableState((1, 1), Orientation.East, true, true)
+    exploredPositionCounts.clear()
+    stenchSquares.clear()
+    breezeSquares.clear()
+    wumpusFreeSquares.clear()
+    pitFreeSquares.clear()
 
   override def process(tp: TransferPercept): Int =
     if actionQueue.isEmpty then
       // update knowledge
-      observe(tp)
-      perceptHistory += (currentState -> tp)
+      currentState = currentState.copy(wumpusIsAlive = currentState.wumpusIsAlive && !tp.getScream)
+      exploredPositionCounts.updateWith(currentState.agentPosition)(_.map(_ + 1) orElse Some(1))
+      wumpusFreeSquares += currentState.agentPosition
+      pitFreeSquares += currentState.agentPosition
+      if tp.getStench then stenchSquares += currentState.agentPosition
+      else wumpusFreeSquares ++= neighbors(currentState.agentPosition)
+      if tp.getBreeze then breezeSquares += currentState.agentPosition
+      else pitFreeSquares ++= neighbors(currentState.agentPosition)
+
       // A belief state is characterized by the positions of the gold, wumpus and both the pits
       val beliefState = currentBeliefState
       // TODO: IMPLEMENT MAXIMAX SEARCH (including the Node and everything)
