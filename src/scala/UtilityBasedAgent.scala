@@ -22,21 +22,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
 
     def isCutoff: Boolean = isTerminal(beliefState) || depth >= TIME_HORIZON
 
-  private case class ObservableState(var agentPosition: Position,
-                                     var agentOrientation: Orientation,
-                                     var hasArrow: Boolean,
-                                     var wumpusIsAlive: Boolean):
-    def execute(action: Int): Int =
-      // Make a dummy state out of the current observable state
-      val dummy: State = State(currentState.agentPosition, currentState.agentOrientation, currentState.hasArrow,
-        currentState.wumpusIsAlive, (0, 0), None, (0, 0), (0, 0))
-      // update the observable state based on the action
-      if action == Action.GO_FORWARD then agentPosition = dummy.transition(Move.GoForward).agentPosition
-      else if action == Action.TURN_RIGHT then agentOrientation = dummy.transition(Move.GoLeft).agentOrientation
-      else if action == Action.TURN_LEFT then agentOrientation = dummy.transition(Move.GoRight).agentOrientation
-      else if action == Action.SHOOT then hasArrow = dummy.transition(Move.Shoot).hasArrow
-      action
-
   private case class State(agentPosition: Position,
                            agentOrientation: Orientation,
                            hasArrow: Boolean,
@@ -235,7 +220,10 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private final val DISCOUNT = 1
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty
 
-  private var currentState: ObservableState = ObservableState((1, 1), Orientation.East, true, true)
+  private var agentPosition: Position = (1, 1)
+  private var agentOrientation: Orientation = Orientation.East
+  private var hasArrow: Boolean = true
+  private var wumpusIsAlive: Boolean = true
   private val visitedSquares: mutable.Set[Position] = mutable.Set.empty
   private val stenchSquares: mutable.Set[Position] = mutable.Set.empty // stench is observed here
   private val breezeSquares: mutable.Set[Position] = mutable.Set.empty // breeze is observed here
@@ -243,7 +231,10 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private val pitFreeSquares: mutable.Set[Position] = mutable.Set.empty // no pit here 100%
 
   override def reset(): Unit =
-    currentState = ObservableState((1, 1), Orientation.East, true, true)
+    agentPosition = (1, 1)
+    agentOrientation = Orientation.East
+    hasArrow = true
+    wumpusIsAlive = true
     visitedSquares.clear()
     stenchSquares.clear()
     breezeSquares.clear()
@@ -263,7 +254,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
 
     // 2. Wumpus possibilities
     val possibleWumpusPositions: Set[Option[Position]] =
-      if currentState.wumpusIsAlive then (allSquares -- wumpusFreeSquares).filter(
+      if wumpusIsAlive then (allSquares -- wumpusFreeSquares).filter(
         stenchSquares subsetOf neighbors(_)
       ).map(Some(_))
       else Set(None)
@@ -271,14 +262,13 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     // 3. Gold possibilities
     // we're trusting the algorithm to always GRAB on glitter here
     val possibleGoldLocations: Set[Position] =
-      allSquares -- (visitedSquares diff Set(currentState.agentPosition))
+      allSquares -- (visitedSquares diff Set(agentPosition))
 
     // A belief state is characterized by the positions of the gold, wumpus and both the pits
     possiblePitCombinations.flatMap {
       case (pit1, pit2) =>
         possibleWumpusPositions.flatMap(wumpus => possibleGoldLocations.map(gold => (
-            State(currentState.agentPosition, currentState.agentOrientation, currentState.hasArrow,
-              currentState.wumpusIsAlive, gold, wumpus, pit1, pit2),
+            State(agentPosition, agentOrientation, hasArrow, wumpusIsAlive, gold, wumpus, pit1, pit2),
             Probability(1, possiblePitCombinations.size * possibleWumpusPositions.size * possibleGoldLocations.size)
         )))
     }.toMap
@@ -316,7 +306,17 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   
   private def transition(beliefState: BeliefState, move: Move): BeliefState =
     beliefState.groupMapReduce(_._1.transition(move))(_._2)(_ + _)
-  
+
+  private def execute(action: Int): Int =
+    // Make a dummy state out of the current observable state
+    val dummy = State(agentPosition, agentOrientation, hasArrow, wumpusIsAlive, (0, 0), None, (0, 0), (0, 0))
+    // update the observable state based on the action
+    if action == Action.GO_FORWARD then agentPosition = dummy.transition(Move.GoForward).agentPosition
+    else if action == Action.TURN_RIGHT then agentOrientation = dummy.transition(Move.GoLeft).agentOrientation
+    else if action == Action.TURN_LEFT then agentOrientation = dummy.transition(Move.GoRight).agentOrientation
+    else if action == Action.SHOOT then hasArrow = dummy.transition(Move.Shoot).hasArrow
+    action
+
   /**
    * THE MAXIMAX SEARCH
    * @param node initial node
@@ -330,14 +330,14 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   override def process(tp: TransferPercept): Int =
     if actionQueue.isEmpty then
       // update knowledge
-      currentState = currentState.copy(wumpusIsAlive = currentState.wumpusIsAlive && !tp.getScream)
-      visitedSquares += currentState.agentPosition
-      wumpusFreeSquares += currentState.agentPosition
-      pitFreeSquares += currentState.agentPosition
-      if tp.getStench then stenchSquares += currentState.agentPosition
-      else wumpusFreeSquares ++= neighbors(currentState.agentPosition)
-      if tp.getBreeze then breezeSquares += currentState.agentPosition
-      else pitFreeSquares ++= neighbors(currentState.agentPosition)
+      wumpusIsAlive = wumpusIsAlive && !tp.getScream
+      visitedSquares += agentPosition
+      wumpusFreeSquares += agentPosition
+      pitFreeSquares += agentPosition
+      if tp.getStench then stenchSquares += agentPosition
+      else wumpusFreeSquares ++= neighbors(agentPosition)
+      if tp.getBreeze then breezeSquares += agentPosition
+      else pitFreeSquares ++= neighbors(agentPosition)
 
       val (maxUtilityChild, maxUtilityValue) = maximax(Node(currentBeliefState, 0, None, None))
       println(s"Max utility: $maxUtilityValue")
@@ -346,4 +346,4 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         case Some(m) => actionQueue.enqueueAll(m.actionSeq)
         case None => assert(false, "Every descendant node must have a non-None move.")
       }
-    currentState.execute(actionQueue.dequeue)
+    execute(actionQueue.dequeue)
