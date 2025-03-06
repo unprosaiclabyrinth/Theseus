@@ -199,86 +199,75 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     def bayesianUpdateGiven(percept: TransferPercept): BeliefState =
       val neighbors = neighborsOf(agentPosition)
 
-      if percept.getStench then
-        // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
-        copy(belief = {
+      val stenchPosterior =
+        if percept.getStench then
+          // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
           val pStench = belief.filter((u, _) => u.wumpus.isDefined && neighbors.contains(u.wumpus.get)).values
             .foldLeft(Probability(0, 1))((acc, p) => acc + p)
           belief.map((u, p) =>
             val likelihood = Probability(if u.wumpus.isDefined && neighbors.contains(u.wumpus.get) then 1 else 0, 1)
             (u, (likelihood * p) / pStench)
           ).filterNot(_._2 == Probability(0, 1))
-        })
-      else
-        copy(belief = {
+        else
           val pNoStench = belief.filterNot((u, _) => u.wumpus.isDefined && neighbors.contains(u.wumpus.get)).values
             .foldLeft(Probability(0, 1))((acc, p) => acc + p)
           belief.map((u, p) =>
             val likelihood = Probability(if u.wumpus.isDefined && neighbors.contains(u.wumpus.get) then 0 else 1, 1)
             (u, (likelihood * p) / pNoStench)
           ).filterNot(_._2 == Probability(0, 1))
-        })
 
-      if percept.getBreeze then
-        // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
-        copy(belief = {
-          val pBreeze = belief.filter((u, _) => neighbors.contains(u.pit1) || neighbors.contains(u.pit2)).values
+      val breezePosterior =
+        if percept.getBreeze then
+          // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
+          val pBreeze = stenchPosterior.filter((u, _) => neighbors.contains(u.pit1) || neighbors.contains(u.pit2)).values
             .foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
+          stenchPosterior.map((u, p) =>
             val likelihood = Probability(if neighbors.contains(u.pit1) || neighbors.contains(u.pit2) then 1 else 0, 1)
             (u, (likelihood * p) / pBreeze)
           ).filterNot(_._2 == Probability(0, 1))
-        })
-      else
-        copy(belief = {
-          val pNoBreeze = belief.filterNot((u, _) => neighbors.contains(u.pit1) || neighbors.contains(u.pit2)).values
+        else
+          val pNoBreeze = stenchPosterior.filterNot((u, _) => neighbors.contains(u.pit1) || neighbors.contains(u.pit2)).values
             .foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
+          stenchPosterior.map((u, p) =>
             val likelihood = Probability(if neighbors.contains(u.pit1) || neighbors.contains(u.pit2) then 0 else 1, 1)
             (u, (likelihood * p) / pNoBreeze)
           ).filterNot(_._2 == Probability(0, 1))
-        })
 
-      if percept.getGlitter then
-        // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
-        copy(belief = {
-          val pGlitter = belief.filter(_._1.gold == agentPosition).values
-            .foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
-            val likelihood = Probability(if agentPosition == u.gold then 1 else 0, 1)
-            (u, (likelihood * p) / pGlitter)
-          ).filterNot(_._2 == Probability(0, 1))
-        })
-      else
-        copy(belief = {
-          val pNoGlitter = belief.filterNot((u, _) => agentPosition == u.gold).values
-            .foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
-            val likelihood = Probability(if agentPosition == u.gold then 0 else 1, 1)
-            (u, (likelihood * p) / pNoGlitter)
-          ).filterNot(_._2 == Probability(0, 1))
-        })
+      val glitterPosterior =
+        if percept.getGlitter then
+          // if I'm getting a stench, then wumpus is alive => u.wumpus is defined
+            val pGlitter = breezePosterior.filter(_._1.gold == agentPosition).values
+              .foldLeft(Probability(0, 1))((acc, p) => acc + p)
+            breezePosterior.map((u, p) =>
+              val likelihood = Probability(if agentPosition == u.gold then 1 else 0, 1)
+              (u, (likelihood * p) / pGlitter)
+            ).filterNot(_._2 == Probability(0, 1))
+        else
+            val pNoGlitter = breezePosterior.filterNot((u, _) => agentPosition == u.gold).values
+              .foldLeft(Probability(0, 1))((acc, p) => acc + p)
+            breezePosterior.map((u, p) =>
+              val likelihood = Probability(if agentPosition == u.gold then 0 else 1, 1)
+              (u, (likelihood * p) / pNoGlitter)
+            ).filterNot(_._2 == Probability(0, 1))
 
-      if percept.getScream then
-        // all beliefs wherein wumpus is alive are wrong
-        copy(belief = {
-          val pScream = belief.filterNot(_._1.wumpus.isDefined).values.foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
+      val posterior =
+        if percept.getScream then
+          // all beliefs wherein wumpus is alive are wrong
+          val pScream = glitterPosterior.filterNot(_._1.wumpus.isDefined).values.foldLeft(Probability(0, 1))((acc, p) => acc + p)
+          glitterPosterior.map((u, p) =>
             val likelihood = Probability(if u.wumpus.isDefined then 0 else 1, 1)
             (u, (likelihood * p) / pScream)
           ).filterNot(_._2 == Probability(0, 1))
-        })
-      else
-        // all beliefs wherein wumpus is dead are wrong
-        copy(belief = {
-          val pNoScream = belief.filter(_._1.wumpus.isDefined).values.foldLeft(Probability(0, 1))((acc, p) => acc + p)
-          belief.map((u, p) =>
+        else
+          // all beliefs wherein wumpus is dead are wrong
+          val pNoScream = glitterPosterior.filter(_._1.wumpus.isDefined).values.foldLeft(Probability(0, 1))((acc, p) => acc + p)
+          glitterPosterior.map((u, p) =>
             val likelihood = Probability(if u.wumpus.isDefined then 1 else 0, 1)
             (u, (likelihood * p) / pNoScream)
           ).filterNot(_._2 == Probability(0, 1))
-        })
 
       // bumps don't matter
+      copy(belief = posterior)
 
     def execute(action: Int): BeliefState =
       if action == Action.GO_FORWARD then transition(Move.GoForward)
