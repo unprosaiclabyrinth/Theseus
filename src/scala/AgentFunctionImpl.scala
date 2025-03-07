@@ -5,41 +5,31 @@
  * at the University of Illinois Chicago
  *
  */
-import scala.annotation.{tailrec, targetName}
-import scala.math.abs
+import scala.annotation.targetName
 import scala.util.Random.shuffle
 
 trait AgentFunctionImpl:
-  /**
-   * Compute the GCD.
-   * @param a a positive integer.
-   * @param b a positive integer.
-   * @return the greatest common divisor of a and b using the Euclidean algorithm.
-   */
-  @tailrec
-  private def gcd(a: Int, b: Int): Int = if b == 0 then a else gcd(b, a % b)
-
   /**
    * Compute the LCM.
    * @param a a positive integer.
    * @param b a positive integer.
    * @return the lowest common multiple of a and b using lcm = ab/gcd.
    */
-  private def lcm(a: Int, b: Int): Int = abs(a * b) / gcd(a, b)
+  private def lcm(a: BigInt, b: BigInt): BigInt = (a * b).abs / a.gcd(b)
 
   /**
    * A custom implementation of rational numbers to avoid floating-point imprecision.
    * @param n numerator.
    * @param d denominator.
    */
-  class Rational(n: Int, d: Int) extends Ordered[Rational]:
+  class Rational(n: BigInt, d: BigInt) extends Ordered[Rational]:
     require(d != 0, "Denominator = 0.")
 
     // Reduce the fraction to the lowest terms and
     // make the new numerator and denominator available publicly
-    private val hcf: Int = gcd(abs(n), abs(d))
-    val numer: Int = if d < 0 then -n / hcf else n / hcf
-    val denom: Int = d / hcf
+    private val hcf: BigInt = n gcd d
+    val numer: BigInt = if d < 0 then -n / hcf else n / hcf
+    val denom: BigInt = d / hcf
 
     /**
      * Allow equality-checking using `==` and `!=` of Rationals.
@@ -47,7 +37,7 @@ trait AgentFunctionImpl:
      * @return a boolean whether this and that are equal.
      */
     override def equals(obj: Any): Boolean = obj match {
-      case that: Probability =>
+      case that: Rational =>
         this.numer == that.numer && this.denom == that.denom
       case _ => false
     }
@@ -101,7 +91,7 @@ trait AgentFunctionImpl:
      * @return the boolean result of the comparison.
      */
     override def compare(that: Rational): Int =
-      (this.numer * that.denom) - (that.numer * this.denom)
+      (this.numer * that.denom) compareTo (that.numer * this.denom)
 
     /**
      * Allow hashing of Rationals.
@@ -113,10 +103,10 @@ trait AgentFunctionImpl:
      * Allow Rationals to be printed on screen.
      * @return the string representation of the Rational.
      */
-    override def toString: String = f"${100 * numer.toFloat/denom.toFloat}%.3f" + "%"
+    override def toString: String = f"${numer.toFloat/denom.toFloat}%.3f"
 
   // Class of rational probabilities
-  case class Probability(n: Int, d: Int) extends Rational(n, d):
+  case class Probability(n: BigInt, d: BigInt) extends Rational(n, d):
     /**
      * Allow addition using `+` of Probabilities to return a Probability.
      * @param that the other addend.
@@ -149,6 +139,12 @@ trait AgentFunctionImpl:
       require(that != Probability(0, 1), "Division by 0.")
       Probability(this.numer * that.denom, this.denom * that.numer)
 
+    /**
+     * Allow Probabilities to be printed on screen.
+     * @return the string representation of the Rational.
+     */
+    override def toString: String = f"${100 * numer.toFloat / denom.toFloat}%.3f" + "%"
+
   // A position in the wumpus world grid
   type Position = (Int, Int) // x, y
 
@@ -176,9 +172,9 @@ trait AgentFunctionImpl:
       weightedActions.values.toList.foldLeft(Probability(0, 1))((acc, p) => acc + p) == Probability(1, 1),
       "Probabilities are not normalized."
     )
-    val theLcm: Int = weightedActions.values.toList.foldLeft(1)((acc, p) => lcm(acc, p.denom))
+    val theLcm = weightedActions.values.toList.foldLeft(BigInt(1))((acc, p) => lcm(acc, p.denom))
     randomElem(
-      weightedActions.flatMap((action, p) => List.fill(theLcm * p.numer / p.denom)(action)).toList
+      weightedActions.flatMap((action, p) => List.fill((theLcm * p.numer / p.denom).intValue)(action)).toList
     )
 
   // Method that resets the agent in case of multiple trials
