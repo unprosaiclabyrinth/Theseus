@@ -57,6 +57,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     wumpusFreeSquares.clear()
     pitFreeSquares.clear()
     pitCombinations = Set.empty
+    actionQueue.clear()
 
   /**
    * Compute all "neighbors" of a given square along with an action that will get the agent there

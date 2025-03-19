@@ -575,7 +575,9 @@ object UtilityBasedAgent extends AgentFunctionImpl:
 
     def dumpTree(): Unit = Tree.dump()
 
-  override def reset(): Unit = POMCP.reset()
+  override def reset(): Unit =
+    POMCP.reset()
+    actionQueue.clear()
 
   private def initialBeliefPrior: Set[Unobservable] =
     val allSquares: Set[Position] = (1 to 4).flatMap(x => (1 to 4).map(y => (x, y))).toSet
