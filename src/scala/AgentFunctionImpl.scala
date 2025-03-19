@@ -105,6 +105,12 @@ trait AgentFunctionImpl:
      */
     override def toString: String = f"${numer.toFloat/denom.toFloat}%.3f"
 
+    /**
+     * Convert this to a BigDecimal.
+     * @return the decimal value corresponding to this Rational as a BigDecimal.
+     */
+    def toBigDecimal: BigDecimal = BigDecimal(numer)/BigDecimal(denom)
+
   // Class of rational probabilities
   case class Probability(n: BigInt, d: BigInt) extends Rational(n, d):
     /**
@@ -147,6 +153,17 @@ trait AgentFunctionImpl:
 
   // A position in the wumpus world grid
   type Position = (Int, Int) // x, y
+  
+  case class Counter(from: Int):
+    private var count: Int = from
+    
+    def next: Int =
+      count += 1
+      count
+      
+    def get: Int = count
+    
+    def reset(): Unit = count = from
 
   /**
    * Private helper method that chooses an element randomly from a list by doing a
@@ -165,7 +182,7 @@ trait AgentFunctionImpl:
    *                        a probability distribution over actions
    * @return an action as per a probabilistic choice
    */
-  def probabilisticChoice(weightedActions: Map[Int, Probability]): Int =
+  def probabilisticChoice[T](weightedActions: Map[T, Probability]): T =
     // Check that the probability distribution is normalized i.e. sums to 1
     // If yes, return probabilistic choice
     require(
