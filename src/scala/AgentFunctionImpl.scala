@@ -153,7 +153,11 @@ trait AgentFunctionImpl:
 
   // A position in the wumpus world grid
   type Position = (Int, Int) // x, y
-  
+
+  /**
+   * A custom iterative infinite (within Int bounds) counter implementation.
+   * @param from the starting integer to count up from.
+   */
   case class Counter(from: Int):
     private var count: Int = from
     
