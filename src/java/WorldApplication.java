@@ -139,6 +139,7 @@ class WorldApplication {
 				// Reset agents
 				SimpleReflexAgent.reset(); // reset SRA
 				ModelBasedReflexAgent.reset(); // reset MRA
+				UtilityBasedAgent.reset() // reset UBA
 		    }
 
 		    for (int i = 0; i < numTrials; i++) {
