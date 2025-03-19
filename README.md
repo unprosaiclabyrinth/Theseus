@@ -13,6 +13,7 @@ The agent aims to maximize the **average** score. The different architectures th
 
 1. Simple reflex agent (SRA)
 2. Model-based reflex agent (MRA) 
+3. Utility-based agent (UBA)
 
 # Getting Started
 
@@ -28,7 +29,11 @@ The model-based reflex agent can be run using:-
 ```zsh
 make mra
 ```
-The current implementation of the agent function or a custom implementation (**note: if [proper protocol](#proper-protocol-for-custom-implementations) or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra` and `mra` targets altogether**) can be run using:-
+The utility-based agent can be run using:-
+```zsh
+make uba
+```
+The current implementation of the agent function or a custom implementation (**note: if [proper protocol](#proper-protocol-for-custom-implementations) or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra`, `mra`, and `uba` targets altogether**) can be run using:-
 ```zsh
 make run
 ```
@@ -46,7 +51,7 @@ return CustomAgent.process(tp) // specify agent
 ```
 3. Make sure that you have copied the comment verbatim and have ended the line with it.
 4. Make sure to override and define the `reset` method for your agent and reset it if necessary in WorldApplication.java just under line 162.
-4. Run `make run` to run the agent. This will not break the `sra` and `mra` targets.
+4. Run `make run` to run the agent. This will not break the `sra`, `mra`, and `uba` targets.
 
 # Design
 

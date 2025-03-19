@@ -14,6 +14,12 @@ mra: src/scala/ModelBasedReflexAgent.scala
 	@make run
 	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
 
+# Utility-based agent
+uba: src/scala/UtilityBasedAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn UtilityBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@make run
+	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
+
 # Check if required tools are installed
 check:
 	@echo "Checking for required tools..."
