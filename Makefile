@@ -1,24 +1,24 @@
 # Default target
 all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra"
+	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn SimpleReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
-	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # Model-based reflex agent
 mra: src/scala/ModelBasedReflexAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn ModelBasedReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
-	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # Utility-based agent
 uba: src/scala/UtilityBasedAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn UtilityBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
-	@mv src/java/AgentFunction.java.orig src/java/AgentFunction.java
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # Check if required tools are installed
 check:
