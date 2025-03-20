@@ -156,6 +156,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      * @return a deterministic state encapsulating the observable and unobservable variables.
      */
     def u2State(u: Unobservable): State =
+      require(belief contains u, "u2State: I don't believe this!")
       u match {
         case uWithWumpus: UnobservableWithWumpus => StateWithWumpus(agentPosition, agentOrientation, hasArrow, uWithWumpus)
         case uSansWumpus: UnobservableSansWumpus => StateSansWumpus(agentPosition, agentOrientation, uSansWumpus)
