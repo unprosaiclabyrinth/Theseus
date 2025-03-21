@@ -905,7 +905,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
    * Compute the Manhattan distance between two squares in the wumpus world.
    * @param pos1 a position (x1, y1)
    * @param pos2 another position (x2, y2)
-   * @return the Manhattan distance:= |x2 - x1| + |y2 - y1| 
+   * @return the Manhattan distance := |x2 - x1| + |y2 - y1|
    */
   private def manhattanDistance(pos1: Position, pos2: Position): Int =
     val (x1, y1) = pos1
@@ -924,5 +924,3 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       POMCP.pruneTree(bestMove)
       actionQueue.enqueueAll(bestMove.toActionSeq())
     actionQueue.dequeue
-
-// 23:18
