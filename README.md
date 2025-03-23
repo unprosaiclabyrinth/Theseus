@@ -17,7 +17,7 @@ The agent aims to maximize the **average** score. The different architectures th
 
 # Getting Started
 
-All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The project repo contains a Makefile that automates building and running the different agents. The Makefile runs the project with the options `nonDeterministicMode` and `randomAgentLoc` set to `false`. It contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the system is checked for the nexessary tools before running the project. The check command is:-
+All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The project repo contains a Makefile that automates building and running the different agents. The Makefile runs the project with the options `forwardProbability (-n)` set to 1 and `randomAgentLoc (-r)` set to `false`. It contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the system is checked for the nexessary tools before running the project. The check command is:-
 ```zsh
 make check
 ```

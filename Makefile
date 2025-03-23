@@ -40,7 +40,7 @@ build: clean
 
 # Run the project
 run: build
-	@scala run -cp target --main-class WorldApplication -- -n false -a false
+	@scala run -cp target --main-class WorldApplication -- -n 1.00 -a false
 
 tenk: build
 	@echo "Running the agent 10,000 times..."

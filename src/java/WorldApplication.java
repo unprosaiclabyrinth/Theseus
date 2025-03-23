@@ -32,7 +32,7 @@ class WorldApplication {
 		int numTrials = 1;
 		int maxSteps = 50;
 		
-		boolean nonDeterministicMode = false;
+		double forwardProbability = 1D;
 		boolean randomAgentLoc = false;
 		boolean userDefinedSeed = false;
 		
@@ -81,7 +81,9 @@ class WorldApplication {
                 }
                 // if the non-determinism is specified
                 case "-n" -> {
-                    nonDeterministicMode = Boolean.parseBoolean(args[i + 1]);
+					forwardProbability = Double.parseDouble(args[i + 1]);
+					if (forwardProbability < 0D || forwardProbability > 1D)
+						throw new IllegalArgumentException("-n argument must be a probability [0,1]");
                     i++;
                 }
             }
@@ -111,8 +113,8 @@ class WorldApplication {
 		    System.out.println("Output filename: " + outFilename);
 		    outputWriter.write("Output filename: " + outFilename + "\n");
 		    
-		    System.out.println("Non-Deterministic Behavior: " + nonDeterministicMode + "\n");
-		    outputWriter.write("Non-Deterministic Behavior: " + nonDeterministicMode + "\n\n");
+		    System.out.printf("Non-Deterministic Forward Probability: %.2f%n",forwardProbability);
+		    outputWriter.write(String.format("Non-Deterministic Forward Probability: %.2f%n%n",forwardProbability));
 		    
 		    
 		    char[][][] wumpusWorld = generateRandomWumpusWorld(seed, worldSize, randomAgentLoc);
@@ -122,7 +124,7 @@ class WorldApplication {
 		    int totalScore = 0;
 	    
 		    for (int currTrial = 0; currTrial < numTrials; currTrial++) {
-		    	Simulation trial = new Simulation(wumpusEnvironment, maxSteps, outputWriter, nonDeterministicMode);
+		    	Simulation trial = new Simulation(wumpusEnvironment, maxSteps, outputWriter, forwardProbability);
 		    	trialScores[currTrial] = trial.getScore();
 		    	
 		    	System.out.println("\n\n___________________________________________\n");

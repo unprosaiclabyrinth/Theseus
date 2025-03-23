@@ -31,7 +31,7 @@ class Simulation {
 	private final TransferPercept transferPercept;
 	private final BufferedWriter outputWriter;
 	
-	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, boolean nonDeterministic) {
+	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, double forwardProbability) {
 		// start the simulator
 		simulationRunning = true;
 		
@@ -39,7 +39,7 @@ class Simulation {
 		transferPercept = new TransferPercept(wumpusEnvironment);
 		environment = wumpusEnvironment;
 		
-		agent = new Agent(environment, transferPercept, nonDeterministic);
+		agent = new Agent(environment, transferPercept, forwardProbability);
 		
 		environment.placeAgent(agent);
 		environment.printEnvironment();
@@ -110,7 +110,7 @@ class Simulation {
 			outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
 		}
 		catch (Exception e) {
-			System.out.println("An exception was thrown: " + e);
+			System.out.println("An exception was thrown: " + e);	
 		}
 	}
 	

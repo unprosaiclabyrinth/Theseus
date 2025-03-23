@@ -18,7 +18,7 @@
 import java.util.Random;
 
 class Agent {
-	private final boolean nonDeterministicMode;
+	private final double forwardProbability;
 	
 	private final int[] location;
 	private char direction;
@@ -34,9 +34,9 @@ class Agent {
 	private final TransferPercept percept;
 	private final AgentFunction agentFunction;
 	
-	public Agent(Environment world, TransferPercept perceptTrans, boolean nonDeterministic) {
-		// set deterministic/non-deterministic
-		nonDeterministicMode = nonDeterministic;
+	public Agent(Environment world, TransferPercept perceptTrans, double forwardProbability) {
+		// set forward probability
+		this.forwardProbability = forwardProbability;
 		
 		// initial conditions
 		isDead = false;
@@ -83,7 +83,7 @@ class Agent {
 	}
 	
 	public void goForward() {
-		if (!nonDeterministicMode) {
+		if (forwardProbability == 1D) {
 			if (direction == 'N') {
 				if (location[0]+1 < worldSize) location[0] += 1;
 				else wumpusWorld.setBump(true);
@@ -148,12 +148,15 @@ class Agent {
 	}
 	
 	private char nonDeterministicMove() {
-		Random rand = new Random();
-        return switch (rand.nextInt(10)) {
-            case 8 -> 'L';
-			case 9 -> 'R';
-			default -> 'F';
-		};		
+		double halfRemainder = (1 - forwardProbability)/2D;
+		double rand = Math.random();
+
+		if(rand < forwardProbability)
+			return 'F';
+		else if (rand >= forwardProbability && rand < forwardProbability + halfRemainder)
+			return 'L';
+		else
+			return 'R';
 	}
 	
 	public boolean shootArrow() {
