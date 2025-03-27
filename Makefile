@@ -1,5 +1,4 @@
-# Default target
-all:
+# Default target all:
 	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba"
 
 # Simple reflex agent
@@ -62,4 +61,4 @@ clean:
 	@rm -rf src/java/*.orig
 
 # Phony targets
-.PHONY: sra mra check build run tenk clean
+.PHONY: sra mra uba check build run tenk clean
