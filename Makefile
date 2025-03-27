@@ -34,7 +34,7 @@ check:
 
 # Build the project
 build: clean
-	@printf "Loading the agent"
+	@printf "Building the agent"
 	@mkdir -p target
 	@scalac -d target src/java/*.java src/scala/*.scala & pid=$$!; \
 		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
