@@ -1,4 +1,5 @@
-# Default target all:
+# Default target
+all:
 	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba"
 
 # Simple reflex agent
@@ -41,7 +42,7 @@ build: clean
 		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
 		wait $$pid
 	@javac -d target -cp target src/java/*.java & pid=$$!; \
-		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
+		while kill -0 $$pid 2> /dev/null; do sleep 0.25; printf "."; sleep 0.25; done; \
 		wait $$pid
 	@echo
 
@@ -51,7 +52,7 @@ run: build
 
 tenk: build
 	@echo "Running the agent 10,000 times..."
-	@scala run -cp target --main-class WorldApplication -- -n false -a false -t 10000 > /dev/null
+	@scala run -cp target --main-class WorldApplication -- -n 1.00 -a false -t 10000 > /dev/null 
 	@echo "Results in wumpus_out.txt"
 
 # Clean the project and junk backup files
