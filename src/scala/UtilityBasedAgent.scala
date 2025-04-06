@@ -533,19 +533,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
        * @param parent the node to expand from
        * @param update the update to expand via
        */
-//      def expandFrom(parent: Int, update: Move | Percept4): Unit =
-//        update match {
-//          case m: Move =>
-//            nodes += (count.next -> Node(
-//              nodes(parent).beliefState.transition(m), Some(parent), mutable.Map.empty, 0, 0.0
-//            ))
-//          case o: Percept4 =>
-//            nodes += (count.next -> Node(
-//              nodes(parent).beliefState.observe(o), Some(parent), mutable.Map.empty, 0, 0.0
-//            ))
-//        }
-//        nodes(parent).children += (update -> count.get)
-
       def expandFrom(parent: Int, update: Move | Percept4): Unit =
         val newBeliefState = update match {
           case m: Move => nodes(parent).beliefState.transition(m)
