@@ -533,18 +533,30 @@ object UtilityBasedAgent extends AgentFunctionImpl:
        * @param parent the node to expand from
        * @param update the update to expand via
        */
+//      def expandFrom(parent: Int, update: Move | Percept4): Unit =
+//        update match {
+//          case m: Move =>
+//            nodes += (count.next -> Node(
+//              nodes(parent).beliefState.transition(m), Some(parent), mutable.Map.empty, 0, 0.0
+//            ))
+//          case o: Percept4 =>
+//            nodes += (count.next -> Node(
+//              nodes(parent).beliefState.observe(o), Some(parent), mutable.Map.empty, 0, 0.0
+//            ))
+//        }
+//        nodes(parent).children += (update -> count.get)
+
       def expandFrom(parent: Int, update: Move | Percept4): Unit =
-        update match {
-          case m: Move =>
-            nodes += (count.next -> Node(
-              nodes(parent).beliefState.transition(m), Some(parent), mutable.Map.empty, 0, 0.0
-            ))
-          case o: Percept4 =>
-            nodes += (count.next -> Node(
-              nodes(parent).beliefState.observe(o), Some(parent), mutable.Map.empty, 0, 0.0
-            ))
+        val newBeliefState = update match {
+          case m: Move => nodes(parent).beliefState.transition(m)
+          case o: Percept4 => nodes(parent).beliefState.observe(o)
         }
-        nodes(parent).children += (update -> count.get)
+        nodes.find(_._2.beliefState == newBeliefState) match {
+          case Some(entry) => nodes(parent).children += (update -> entry._1)
+          case None =>
+            nodes += (count.next -> Node(newBeliefState, Some(parent), mutable.Map.empty, 0, 0.0))
+            nodes(parent).children += (update -> count.get)
+        }
 
       /**
        * Checks whether the given node has not been visited since that is the leaf condition
