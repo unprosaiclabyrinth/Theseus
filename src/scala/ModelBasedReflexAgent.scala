@@ -215,12 +215,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
         else // if the wumpus is in front, simply SHOOT
           actionQueue.enqueue(Action.SHOOT)
       case 2 => // case: exactly 2 potential wumpus positions
-        val justStarted: Boolean = exploredOrientationCounts.isEmpty || {
-          val exploredPositions: Set[Position] = exploredOrientationCounts.keySet.map(_._1).toSet
-          exploredPositions.size == 1 && exploredPositions.head == (1, 1)
-        }
         // just started? use random shooting strategy
-        if justStarted || exploredOrientationCounts.filter {
+        if exploredOrientationCounts.isEmpty || exploredOrientationCounts.filter {
           case ((sq, _), _) => sq == agentPosition
         }.values.sum >= 2 then
           if hasArrow then
