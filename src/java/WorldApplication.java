@@ -142,7 +142,7 @@ class WorldApplication {
 				SimpleReflexAgent.reset(); // reset SRA
 				ModelBasedReflexAgent.reset(); // reset MRA
 				UtilityBasedAgent.reset(); // reset UBA
-                HybridLearningAgent.reset() // Reset HLA
+                HybridLearningAgent.reset(); // reset HLA
 
 		    }
 
