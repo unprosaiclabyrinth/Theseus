@@ -324,15 +324,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
    * Implement partially observable Monte Carlo planning (POMCP)
    */
   private case object POMCP:
-    /**
-     * Model a node in the Monte Carlo search tree (MCST)
-     *
-     * @param beliefState  the corresponding belief state.
-     * @param parent       the parent node index.
-     * @param children     a map from updates that have occurred at this node to the resulting children node indices.
-     * @param visitedCount the number of times this node has been visited.
-     * @param value        the expected utility value of this node.
-     */
     private case class Node(beliefState: BeliefState,
                             parent: Option[Int],
                             children: mutable.Map[Move | Percept, Int],
@@ -346,20 +337,16 @@ object HybridLearningAgent extends AgentFunctionImpl:
     private final val DISCOUNT = BigDecimal(0.2)
     private final val EXPLORATION_CONST = BigDecimal(sqrt(2)) // used in UCT - UCB1
 
-    /**
-     * Model the MCST
-     */
     private case object Tree:
       var root = -1 // current root index
       private val count: Counter = Counter(-1) // a counter that generates node indices on demand
 
       // a map from indices to MCST nodes
       private val nodes: mutable.Map[Int, Node] = mutable.Map.empty
+
+      // a map from belief states to indices
       private val indices: mutable.Map[BeliefState, Int] = mutable.Map.empty
 
-      /**
-       * Initialize the MCST from the partial model of the HLA
-       */
       def initialize(o: Percept): Unit =
         val allSquares: Set[Position] = (1 to 4).flatMap(x => (1 to 4).map(y => (x, y))).toSet
 
@@ -402,22 +389,12 @@ object HybridLearningAgent extends AgentFunctionImpl:
 
         indices += (initialBeliefState -> -1)
 
-      /**
-       * Reset the MCST
-       */
       def reset(): Unit =
         root = -1
         count.reset()
         nodes.clear()
         indices.clear()
 
-      /**
-       * Expand from a node in the MCST to obtain a child via the given update.
-       * Add the child node to the parent's children set as well as to the MCST's nodes map.
-       *
-       * @param parent the node to expand from
-       * @param update the update to expand via
-       */
       def expandFrom(parent: Int, update: Move | Percept): Unit =
         val newBeliefState = update match {
           case m: Move => nodes(parent).beliefState.transition(m)
@@ -431,48 +408,21 @@ object HybridLearningAgent extends AgentFunctionImpl:
             nodes(parent).children += (update -> count.get)
         }
 
-      /**
-       * Checks whether the given node has not been visited since that is the leaf condition
-       *
-       * @param n a node index
-       * @return is the node with index n a leaf in the MCST?
-       */
       def isLeaf(n: Int): Boolean =
         require(nodes contains n, "isLeaf: No such node.")
         nodes(n).children.isEmpty
 
-      /**
-       * Retrieves the index of the child of the parent that is obtained via a given observation.
-       * If no such child exists, then the child is created and its index is returned.
-       *
-       * @param n a node in the MCST
-       * @param o a percept
-       * @return index of the child obtained on observing pecept o @ node n
-       */
       def getObsNode(n: Int, o: Percept): Int =
         require(nodes contains n, "getObsNode: Invalid node index.")
         if !(nodes(n).children contains o) then expandFrom(n, o)
         nodes(n).children(o)
 
-      /**
-       * Private helper that prunes the tree recursively to keep the subtree rooted at the new root.
-       *
-       * @param root    the current root
-       * @param newRoot the new root where the pruned tree should be rooted
-       */
       private def pruneRecursively(root: Int, newRoot: Int): Unit =
         if root != newRoot then
           nodes(root).children foreach ((_, n) => pruneRecursively(n, newRoot))
           nodes.subtractOne(root)
           indices.filterInPlace((_, n) => n != root)
 
-      /**
-       * Computes the child of the current root that is obtained from the given update, makes
-       * it the new root and deletes everything else. Essentially traverses the tree one step
-       * based on a real update (move or percept) from the real world.
-       *
-       * @param update a move or percept from the real world.
-       */
       def prune(update: Move | Percept): Unit =
         val children = nodes(root).children
         val newRoot = update match {
@@ -485,12 +435,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
         nodes.get(root).foreach(curr => nodes(root) = curr.copy(children = children.filter(_._2 == newRoot)))
         root = newRoot
 
-      /**
-       * When the tree is pruned using `prune()`, the parent of the new root (i.e. the old root in all but one case)
-       * is left in (i.e. not pruned) since its data is required for UCB1 computation. Hence, the root parent must
-       * be pruned separately when it is no longer needed. This method prunes just parent and sets the parent of the
-       * new root to None. Hence, make the "new root" the new root.
-       */
       def pruneRootParent(): Unit =
         require(nodes contains root, "pruneRootParent: Root node not found.")
         nodes(root).parent match {
@@ -499,14 +443,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
         }
         nodes.get(root).foreach(curr => nodes(root) = curr.copy(parent = None))
 
-      /**
-       * Compute the weighted UCB1 score for a node.
-       *
-       * @param n               a node index in the MCST
-       * @param expltMoveWeight a functional parameter that returns an exploitation weight for a given move
-       * @param explrMoveWeight a functional parameter that returns an exploration weight for a given move
-       * @return the UCB1 value
-       */
       private def ucb1(n: Int, expltMoveWeight: Move => BigDecimal, explrMoveWeight: Move => BigDecimal): BigDecimal =
         require(nodes contains n, "UCB1: No such node.")
 
@@ -527,12 +463,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
           }
         ) / (node.visitedCount + 1))) // avoid division by 0 for leaves
 
-      /**
-       * Dictate the selection of a move at a node using a selection policy
-       *
-       * @param n a node index in the MCST
-       * @return a move and the child node after executing the move
-       */
       def selectionPolicy(n: Int): (Move, Int) =
         require(nodes contains n, "selection policy: No such node.")
         val actionLeaves = nodes(n).children.filter((t, c) => t.isInstanceOf[Move] &&
@@ -560,54 +490,24 @@ object HybridLearningAgent extends AgentFunctionImpl:
             case o: Percept => assert(false, "selectionPolicy: Finding an observation child is not possible.")
           }
 
-      /**
-       * Retrieve the belief state at a node in the MCST
-       *
-       * @param n a node index in the MCST
-       * @return the corresponding belief state
-       */
       def beliefStateAt(n: Int): BeliefState =
         require(nodes contains n, "beliefStateAt: No such node.")
         nodes(n).beliefState
 
-      /**
-       * "Visit" a node by incrementing its visitedCount
-       *
-       * @param n the node index of the node to visit in the MCST
-       */
       def visit(n: Int): Unit =
         require(nodes contains n, "visit: No such node.")
         nodes.get(n).foreach(curr => nodes(n) = curr.copy(visitedCount = curr.visitedCount + 1))
 
-      /**
-       * Update the mean value of a node given a new utility
-       *
-       * @param n a node index in the MCST
-       * @param u a new utility value
-       */
       def updateMeanValue(n: Int, u: BigDecimal): Unit =
         require(nodes contains n, "valueOf: No such node.")
         val m = nodes(n).visitedCount
         val v = nodes(n).value
         nodes.get(n).foreach(curr => nodes(n) = curr.copy(value = v + (u - v) / m))
 
-      /**
-       * Overwrite the value of a node with a new value
-       *
-       * @param n        a node index in the MCST
-       * @param newValue a new utility value
-       */
       def setValue(n: Int, newValue: BigDecimal): Unit =
         require(nodes contains n, "visit: No such node.")
         nodes.get(n).foreach(curr => nodes(n) = curr.copy(value = newValue))
 
-      /**
-       * A debugging helper that recursively dumps the MCST to stdout.
-       * (WARNING: don't use unless on the verge of dying of frustration while debugging)
-       *
-       * @param node  a node index in the MCST
-       * @param depth dumps the node at this depth
-       */
       def dump(node: Int = root, depth: Int = 0): Unit =
         require(nodes contains node, s"dump: No such node $node")
 
@@ -640,15 +540,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
       Tree.pruneRootParent()
       bestMove
 
-    /**
-     * Traverse the MCST until a leaf following best moves using the selection policy,
-     * simulate a rollout at the leaf, and back-propagate the results tonthe root.
-     *
-     * @param s     a (deterministic) state sampled from the current belief state.
-     * @param n     the node index corresponding to the current belief state.
-     * @param depth the depth of the current node.
-     * @return the aggregate utility calculated as sum of the immediate reward and the discounted utility
-     */
     private def simulate(s: State, n: Int, depth: Int): BigDecimal =
       if (depth >= TIME_HORIZON || DISCOUNT.pow(depth) <= DISCOUNT_HORIZON) && depth > 0 then 0.0
       else if s.isTerminal then -1000.0
@@ -667,12 +558,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
         Tree.updateMeanValue(nextNode, utility)
         utility
 
-    /**
-     * Define a rollout policy that dictates that choice of the next move during a rollout given the belief state
-     *
-     * @param b a belief state
-     * @return a move
-     */
     private def rolloutPolicy(b: BeliefState): Move =
       val possibleMoves = b.possibleMoves
       b.history.lastOption match {
@@ -687,15 +572,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
         case None => randomElem((possibleMoves - Move.Shoot).toList)
       }
 
-    /**
-     * Generate a 3-tuple of a (state, percept, reward) given a state and move executed in that state.
-     * Simply generates the successor state, the computed percept in the successor state, and the immediate
-     * reward + heuristic of executing the given move in the given state.
-     *
-     * @param s a state
-     * @param m a move
-     * @return a 3-tuple of (state, percept, reward)
-     */
     private def generate(s: State, m: Move): (State, Percept, BigDecimal) =
       val successor = s.transition(m).sampleState
       successor match {
@@ -715,14 +591,6 @@ object HybridLearningAgent extends AgentFunctionImpl:
         ), s.reward(m) + s.heuristic(m))
       }
 
-    /**
-     * Recursively simulate a rollout until a specified time horizon.
-     *
-     * @param s     a state
-     * @param b     the belief state from which that state has been sampled
-     * @param depth the current depth of the simulation (between 0 and the time horizon)
-     * @return the value of the rollout computed as the sum of the immediate reward and the discounted utility
-     */
     private def rollout(s: State, b: BeliefState, depth: Int): BigDecimal =
       if (depth >= TIME_HORIZON || DISCOUNT.pow(depth) <= DISCOUNT_HORIZON) && depth > 0 then 0.0
       else if s.isTerminal || b.isTerminal then -1000.0
@@ -731,27 +599,12 @@ object HybridLearningAgent extends AgentFunctionImpl:
         val (successor, o, r) = generate(s, m)
         r + (DISCOUNT * rollout(successor, b.transition(m).observe(o), depth + 1))
 
-    /**
-     * Prune the MCST given the update at the root.
-     *
-     * @param update the update at the root.
-     */
     def pruneTree(update: Move | Percept): Unit = Tree.prune(update)
 
-    /**
-     * Initialize the MCST
-     */
     def initialize(o: Percept): Unit = Tree.initialize(o)
 
-    /**
-     * Reset the MCST.
-     */
     def reset(): Unit = Tree.reset()
 
-    /**
-     * Dump the tree to stdout for debugging.
-     * (WARNING: don't use unless on the verge of dying of frustration while debugging).
-     */
     def dumpTree(): Unit = Tree.dump()
 
   private def neighborsOf(sq: Position): Set[Position] =
@@ -864,8 +717,16 @@ object HybridLearningAgent extends AgentFunctionImpl:
 
   override def reset(): Unit =
     hasArrow = true
+    pitFree.clear()
+    pitFree += 1 -> 1
+    wumpus = (0, 1)
+    agentPosPrior.clear()
+    agentPosPrior += 1 -> 1
+    learningHistory = History.empty
     forwardProbability = 0
     Learning.reset()
+    POMCP.reset()
+    ModelBasedReflexAgent.reset()
 
   private object UtilityBasedHelper:
     def process(o: Percept, init: Boolean = false): Move =
