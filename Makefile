@@ -1,6 +1,6 @@
 # Default target
 all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba"
+	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, hla"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
@@ -17,6 +17,12 @@ mra: src/scala/ModelBasedReflexAgent.scala
 # Utility-based agent
 uba: src/scala/UtilityBasedAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn UtilityBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@make run
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
+
+# Hybrid learning agent
+hla: src/scala/HybridLearningAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn HybridLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
@@ -63,4 +69,4 @@ clean:
 	@rm -rf src/java/*.orig
 
 # Phony targets
-.PHONY: sra mra uba check build run tenk clean
+.PHONY: sra mra uba hla check build run tenk clean
