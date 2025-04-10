@@ -6,7 +6,7 @@ This project implements different intelligent agent architectures for an agent c
 
 + The agent starts in (1,1), facing east, in a $$4 \times 4$$ grid.
 + There are exactly two pits in the world.
-+ The *forward probability* of the `GO_FORWARD` action can be passed in using the `-n` flag. For example, a forward probability of 0.8 implies that on a `GO_FORWARD` action, the agent has an 80% chance of going forward, and a 10% chance each of slipping to the right or the left while keeping its orientation intact. All other actions are always deterministic. A forward probability of 1 means that the agent is determinisitic.
++ The *forward probability* of the `GO_FORWARD` action can be passed in using the `-n` flag (look at the `run` recipe in the Makefile). For example, a forward probability of 0.8 implies that on a `GO_FORWARD` action, the agent has an 80% chance of going forward, and a 10% chance each of slipping to the right or the left while keeping its orientation intact. All other actions are always deterministic. A forward probability of 1 means that the agent is determinisitic.
 + A `NO_OP` is a possible action that does nothing. It has no cost, unlike other actions.
 
 The agent aims to maximize the **average** score. The different architectures the project implements are:-
