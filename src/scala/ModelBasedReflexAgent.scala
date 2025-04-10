@@ -11,7 +11,7 @@ import scala.collection.mutable
 
 object ModelBasedReflexAgent extends AgentFunctionImpl:
   // North is on top
-  enum Direction:
+  private enum Direction:
     case North, South, East, West
 
   // Tags for special unsafe squares
@@ -58,6 +58,8 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     pitFreeSquares.clear()
     pitCombinations = Set.empty
     actionQueue.clear()
+  
+  def hlaInit(arrow: Boolean): Unit = hasArrow = arrow
 
   /**
    * Compute all "neighbors" of a given square along with an action that will get the agent there
