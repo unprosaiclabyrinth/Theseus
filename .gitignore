@@ -3,5 +3,4 @@ wumpus_*.txt
 .bsp
 .scala-build
 deliverables
-eval.R
 update.sh
