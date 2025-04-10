@@ -512,9 +512,11 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       private val count: Counter = Counter(-1) // a counter that generates node indices on demand
 
       // a map from indices to MCST nodes
+      private val initialBeliefState = BeliefState((1, 1), Orientation.East, true, initialBeliefPrior, History.empty)
       private val nodes: mutable.Map[Int, Node] = mutable.Map(-1 -> Node(
-        BeliefState((1, 1), Orientation.East, true, initialBeliefPrior, History.empty), None, mutable.Map.empty, 0, 0.0
+        initialBeliefState, None, mutable.Map.empty, 0, 0.0
       ))
+      private val indices: mutable.Map[BeliefState, Int] = mutable.Map(initialBeliefState -> -1)
 
       /**
        * Reset the MCST
@@ -524,8 +526,10 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         count.reset()
         nodes.clear()
         nodes += (-1 -> Node(
-          BeliefState((1, 1), Orientation.East, true, initialBeliefPrior, History.empty), None, mutable.Map.empty, 0, 0.0
+          initialBeliefState, None, mutable.Map.empty, 0, 0.0
         ))
+        indices.clear()
+        indices += (initialBeliefState -> -1)
 
       /**
        * Expand from a node in the MCST to obtain a child via the given update.
@@ -538,10 +542,11 @@ object UtilityBasedAgent extends AgentFunctionImpl:
           case m: Move => nodes(parent).beliefState.transition(m)
           case o: Percept4 => nodes(parent).beliefState.observe(o)
         }
-        nodes.find(_._2.beliefState == newBeliefState) match {
-          case Some(entry) => nodes(parent).children += (update -> entry._1)
+        indices.get(newBeliefState) match {
+          case Some(n) => nodes(parent).children += (update -> n)
           case None =>
             nodes += (count.next -> Node(newBeliefState, Some(parent), mutable.Map.empty, 0, 0.0))
+            indices += (newBeliefState -> count.get)
             nodes(parent).children += (update -> count.get)
         }
 
@@ -575,6 +580,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         if root != newRoot then
           nodes(root).children foreach ((_, n) => pruneRecursively(n, newRoot))
           nodes.subtractOne(root)
+          indices.filterInPlace((_, n) => n != root)
 
       /**
        * Computes the child of the current root that is obtained from the given update, makes
