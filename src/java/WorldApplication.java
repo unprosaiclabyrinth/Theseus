@@ -245,7 +245,7 @@ class WorldApplication {
 
 		// Custom
 //		occupied[2][0] = true;
-//		newWorld[2][0][0] = 'W';
+//		newWorld[2][0][1] = 'W';
 		
 		// Gold Generation
 		// Random
