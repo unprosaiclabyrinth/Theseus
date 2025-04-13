@@ -516,7 +516,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       private val nodes: mutable.Map[Int, Node] = mutable.Map(-1 -> Node(
         initialBeliefState, None, mutable.Map.empty, 0, 0.0
       ))
-      private val indices: mutable.Map[BeliefState, Int] = mutable.Map(initialBeliefState -> -1)
 
       /**
        * Reset the MCST
@@ -528,8 +527,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         nodes += (-1 -> Node(
           initialBeliefState, None, mutable.Map.empty, 0, 0.0
         ))
-        indices.clear()
-        indices += (initialBeliefState -> -1)
 
       /**
        * Expand from a node in the MCST to obtain a child via the given update.
@@ -542,13 +539,8 @@ object UtilityBasedAgent extends AgentFunctionImpl:
           case m: Move => nodes(parent).beliefState.transition(m)
           case o: Percept4 => nodes(parent).beliefState.observe(o)
         }
-        indices.get(newBeliefState) match {
-          case Some(n) => nodes(parent).children += (update -> n)
-          case None =>
-            nodes += (count.next -> Node(newBeliefState, Some(parent), mutable.Map.empty, 0, 0.0))
-            indices += (newBeliefState -> count.get)
-            nodes(parent).children += (update -> count.get)
-        }
+        nodes += (count.next -> Node(newBeliefState, Some(parent), mutable.Map.empty, 0, 0.0))
+        nodes(parent).children += (update -> count.get)
 
       /**
        * Checks whether the given node has not been visited since that is the leaf condition
@@ -580,7 +572,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         if root != newRoot then
           nodes(root).children foreach ((_, n) => pruneRecursively(n, newRoot))
           nodes.subtractOne(root)
-          indices.filterInPlace((_, n) => n != root)
 
       /**
        * Computes the child of the current root that is obtained from the given update, makes
