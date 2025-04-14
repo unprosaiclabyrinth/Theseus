@@ -18,7 +18,7 @@
 class AgentFunction {
 	public int process(TransferPercept tp) {
 		// return action to be performed
-		return HybridLearningAgent.process(tp); // specify agent
+		return ReactiveLearningAgent.process(tp); // specify agent
 	}
 	
 	// public method to return the agent's name
