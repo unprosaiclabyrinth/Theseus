@@ -813,18 +813,20 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
           ModelBasedReflexAgent.reset()
           ModelBasedReflexAgent.rlaInit(hasArrow)
           actionQueue enqueue ModelBasedReflexAgent.process(tp)
+        else if forwardProbability == 0.8 then
+          actionQueue enqueue SimpleReflexHelper.process(percept, true).action
         else
           actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-//          actionQueue enqueue SimpleReflexHelper.process(percept, true).action
       else
         // adaptive update
         if forwardProbability == 1 && percept.bump then forwardProbability = 0.8
         globB = globB.observe(percept)
         if forwardProbability == 1 then
           actionQueue enqueue ModelBasedReflexAgent.process(tp)
+        else if forwardProbability == 0.8 then
+          actionQueue enqueue SimpleReflexHelper.process(percept).action
         else
           actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-//        actionQueue enqueue SimpleReflexHelper.process(percept).action
     val action = actionQueue.dequeue
     val move =
       if action == Action.GO_FORWARD then Move.GoForward
