@@ -8,6 +8,7 @@
  *
  */
 import scala.collection.mutable
+import scala.language.postfixOps
 
 object ModelBasedReflexAgent extends AgentFunctionImpl:
   // North is on top
@@ -306,30 +307,31 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
       )
     )
 
-    // compute individual pit positions from possible pitCombinations
-    // by computing the intersection of all possible pitCombinations
-    val pits: Set[Position] = pitCombinations.foldLeft(pitCombinations.head)(
-      (acc: Set[Position], combination) => acc intersect combination
-    )
-    pits.size match {
-      case 2 => // if the intersection of all 2-tuples in a set of 2-tuples is a 2-tuple
-        // then there must be only one 2-tuple to begin with: both of them are pits
-        pitCombinations.head.foreach(pitPos =>
+    if pitCombinations nonEmpty then // this check is in case of a mislearnt p in the RLA
+      // compute individual pit positions from possible pitCombinations
+      // by computing the intersection of all possible pitCombinations
+      val pits: Set[Position] = pitCombinations.foldLeft(pitCombinations.head)(
+        (acc: Set[Position], combination) => acc intersect combination
+      )
+      pits.size match {
+        case 2 => // if the intersection of all 2-tuples in a set of 2-tuples is a 2-tuple
+          // then there must be only one 2-tuple to begin with: both of them are pits
+          pitCombinations.head.foreach(pitPos =>
+            if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
+              println(s"\"Yay! PIT found @ $pitPos.\"")
+              unsafeSquares += ((pitPos, UnsafeTag.Pit))
+          )
+          numFoundPits = 2
+        case 1 => // if one position is common between all 2-tuples, that is definitely a pit
+          // be sure that the common position is not an already-found pit
+          val pitPos = pits.head
           if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
             println(s"\"Yay! PIT found @ $pitPos.\"")
             unsafeSquares += ((pitPos, UnsafeTag.Pit))
-        )
-        numFoundPits = 2
-      case 1 => // if one position is common between all 2-tuples, that is definitely a pit
-        // be sure that the common position is not an already-found pit
-        val pitPos = pits.head
-        if !unsafeSquares.map(_._1).toSet.contains(pitPos) then
-          println(s"\"Yay! PIT found @ $pitPos.\"")
-          unsafeSquares += ((pitPos, UnsafeTag.Pit))
-          numFoundPits += 1
-        else { /* nothing to be done */ }
-      case _ => /* nothing to be done */
-    }
+            numFoundPits += 1
+          else { /* nothing to be done */ }
+        case _ => /* nothing to be done */
+      }
 
   /**
    * Compute pit probabilities for all neighbors, and choose the next square out of the
