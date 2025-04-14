@@ -809,13 +809,16 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       else if forwardProbability == 0 then
         forwardProbability = Learning.learned
         initializeGlobalBeliefState()
+        globB.observe(percept)
         if forwardProbability == 1 then
           ModelBasedReflexAgent.reset()
           ModelBasedReflexAgent.rlaInit(hasArrow)
           actionQueue enqueue ModelBasedReflexAgent.process(tp)
         else if forwardProbability == 0.8 then
           actionQueue enqueue SimpleReflexHelper.process(percept, true).action
+//          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
         else
+//          actionQueue enqueue SimpleReflexHelper.process(percept, true).action
           actionQueue enqueue StochasticModelBasedHelper.process(percept).action
       else
         // adaptive update
@@ -825,7 +828,9 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
           actionQueue enqueue ModelBasedReflexAgent.process(tp)
         else if forwardProbability == 0.8 then
           actionQueue enqueue SimpleReflexHelper.process(percept).action
+//          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
         else
+//          actionQueue enqueue SimpleReflexHelper.process(percept).action
           actionQueue enqueue StochasticModelBasedHelper.process(percept).action
     val action = actionQueue.dequeue
     val move =
