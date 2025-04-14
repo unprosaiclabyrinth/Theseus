@@ -84,7 +84,6 @@ la-tenk: build
 # If junk backups exist before build, then they are indeed junk
 clean:
 	@rm -rf target
-	@rm -rf src/java/*.orig
 
 # Phony targets
 .PHONY: sra mra uba rla check build run tenk clean
