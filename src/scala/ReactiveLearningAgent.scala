@@ -594,7 +594,9 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
 
     def isDone: Boolean = !notDone
 
-    def reset(): Unit = state = LearningState.Start
+    def reset(): Unit =
+      state = LearningState.Start
+      learningExperience.clear()
 
     object StateMachine:
       def transition(o: Percept): Unit =
