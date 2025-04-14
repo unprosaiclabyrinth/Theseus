@@ -64,9 +64,16 @@ tenk: build
 
 la-tenk: build
 	@echo "Running the agent 10,000 times with different forward probabilities..."
+
 	@scala run -cp target --main-class WorldApplication -- -n 1.0 -a false -t 3334 -f deterministic_out.txt > /dev/null
+	@echo "Done deterministic trials, results written to deterministic_out.txt"
+
 	@scala run -cp target --main-class WorldApplication -- -n 0.8 -a false -t 3333 -f stochastic_out.txt > /dev/null
+	@echo "Done stochastic trials, results written to stochastic_out.txt"
+
 	@scala run -cp target --main-class WorldApplication -- -n 0.3334 -a false -t 3333 -f random_out.txt > /dev/null
+	@echo "Done random trials, results written to random_out.txt"
+
 	@cat deterministic_out.txt stochastic_out.txt random_out.txt > wumpus_out.txt
 	@rm -f deterministic_out.txt stochastic_out.txt random_out.txt
 	@cat wumpus_out.txt | 'Total Score:'
