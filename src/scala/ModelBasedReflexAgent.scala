@@ -59,7 +59,7 @@ object ModelBasedReflexAgent extends AgentFunctionImpl:
     pitCombinations = Set.empty
     actionQueue.clear()
   
-  def hlaInit(arrow: Boolean): Unit = hasArrow = arrow
+  def rlaInit(arrow: Boolean): Unit = hasArrow = arrow
 
   /**
    * Compute all "neighbors" of a given square along with an action that will get the agent there

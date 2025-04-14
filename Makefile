@@ -1,6 +1,6 @@
 # Default target
 all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, hla"
+	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
@@ -20,9 +20,9 @@ uba: src/scala/UtilityBasedAgent.scala
 	@make run
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
-# Hybrid learning agent
-hla: src/scala/HybridLearningAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn HybridLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+# Reactive learning agent
+rla: src/scala/ReactiveLearningAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
@@ -69,7 +69,8 @@ la-tenk: build
 	@scala run -cp target --main-class WorldApplication -- -n 0.3334 -a false -t 3333 -f random_out.txt > /dev/null
 	@cat deterministic_out.txt stochastic_out.txt random_out.txt > wumpus_out.txt
 	@rm -f deterministic_out.txt stochastic_out.txt random_out.txt
-	@tail -n1 wumpus_out.txt
+	@cat wumpus_out.txt | 'Total Score:'
+	@cat wumpus_out.txt | 'Average Score:'
 	@echo "Complete results in wumpus_out.txt"
 
 # Clean the project and junk backup files
@@ -79,4 +80,4 @@ clean:
 	@rm -rf src/java/*.orig
 
 # Phony targets
-.PHONY: sra mra uba hla check build run tenk clean
+.PHONY: sra mra uba rla check build run tenk clean
