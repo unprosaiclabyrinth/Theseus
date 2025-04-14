@@ -21,6 +21,7 @@ uba: src/scala/UtilityBasedAgent.scala
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # Reactive learning agent
+# Change the forward probability in the run recipe
 rla: src/scala/ReactiveLearningAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
