@@ -774,17 +774,6 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      */
     private def rolloutPolicy(b: BeliefState): Move =
       val possibleMoves = b.possibleMoves
-      val wumpusSquares =
-        b.belief.filter(_.isInstanceOf[UnobservableWithWumpus])
-          .map(_.asInstanceOf[UnobservableWithWumpus].wumpus)
-      val pitCombinations = b.belief.map {
-        case u: UnobservableWithWumpus => u.pits
-        case u: UnobservableSansWumpus => u.pits
-      }
-      val goldLocations = b.belief.map {
-        case u: UnobservableWithWumpus => u.gold
-        case u: UnobservableSansWumpus => u.gold
-      }
       b.history.lastOption match {
         case Some(update) => update match {
           case m: Move => assert(false, "Action after an action in history.")
