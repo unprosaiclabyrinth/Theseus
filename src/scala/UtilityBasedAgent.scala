@@ -9,7 +9,6 @@
  */
 import scala.collection.mutable
 import scala.language.postfixOps
-import scala.math.BigDecimal.RoundingMode
 
 object UtilityBasedAgent extends AgentFunctionImpl:
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty
@@ -222,7 +221,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         ), _.pits exists (neighborsOf(agentPosition) contains)
       ), lastUpdate = o)
 
-    def eval: BigDecimal = (-1000 * numDeaths) + (1000 * numGolds) - belief.size
+    def eval: Double = (-1000 * numDeaths) + (1000 * numGolds) - belief.size
 
     def isTerminal: Boolean = belief isEmpty
 
@@ -259,18 +258,18 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private var currentBeliefState: BeliefState = initialBeliefState
 
   private object FullWidthPlanning:
-    private final val TIME_HORIZON = 5
-    private final val DISCOUNT = BigDecimal(0.8)
+    private final val TIME_HORIZON: Int = 5
+    private final val DISCOUNT: Double = 0.8
 
     private case class Node(beliefState: BeliefState,
-                            value: BigDecimal,
+                            value: Double,
                             children: Map[Move | Percept4, Node],
                             depth: Int)
 
     infix def plan: Move =
       val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0))
       tree.children.maxBy((m, n) =>
-        println(s"$m: ${n.value.setScale(4, RoundingMode.UP)}")
+        println(f"$m: ${n.value%.4f}")
         n.value
       )._1.asInstanceOf[Move]
 
@@ -281,14 +280,14 @@ object UtilityBasedAgent extends AgentFunctionImpl:
       if obsNode then // observation node (cannot be a leaf)
         val successors: Map[Move | Percept4, Node] =
           b.possibleMoves.map(m => m -> buildTree(Node(b transition m, 0, Map.empty, d + 1))).toMap
-        val utility: BigDecimal = DISCOUNT * successors.values.maxBy(_.value).value
+        val utility: Double = DISCOUNT * successors.values.maxBy(_.value).value
         Node(b, utility + b.eval, successors, d)
       else if (root.depth == TIME_HORIZON) || b.isTerminal then // leaf action node
         Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d)
       else // interior action node
         val successors: Map[Move | Percept4, Node] =
           b.possibleObservations.map(o => o -> buildTree(Node(b observe o, 0, Map.empty, d))).toMap
-        val utility: BigDecimal = DISCOUNT * successors.values.map(_.value).sum / successors.size
+        val utility: Double = DISCOUNT * successors.values.map(_.value).sum / successors.size
         Node(b, utility + b.eval + b.lastUpdate.asInstanceOf[Move].reward, successors, d)
 
   override def reset(): Unit =
