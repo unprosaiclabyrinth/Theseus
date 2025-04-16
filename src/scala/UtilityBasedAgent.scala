@@ -125,14 +125,14 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         val validRight = !outOfBounds(agentOrientation.rightFrom(agentPosition))
         val validBack = !outOfBounds(agentOrientation.backFrom(agentPosition))
         val inclusionCondition: Map[Move, Boolean] = Move.values.map(m => m -> (m match {
-          case Move.GoForward => validFront
-          case Move.GoLeft => validLeft
-          case Move.GoRight => validRight
-          case Move.GoBack => validBack
-          case Move.Shoot => hasArrow && validFront && o.stench
-          case Move.ShootLeft => hasArrow && validLeft && o.stench
-          case Move.ShootRight => hasArrow && validRight && o.stench
-          case Move.NoOp => true
+          case Move.GoForward => validFront && !o.glitter
+          case Move.GoLeft => validLeft && !o.glitter
+          case Move.GoRight => validRight && !o.glitter
+          case Move.GoBack => validBack && !o.glitter
+          case Move.Shoot => hasArrow && validFront && o.stench && !o.glitter
+          case Move.ShootLeft => hasArrow && validLeft && o.stench && !o.glitter
+          case Move.ShootRight => hasArrow && validRight && o.stench && !o.glitter
+          case Move.NoOp => !o.glitter
           case Move.Grab => o.glitter
         })).toMap
         Move.values.toSet filter inclusionCondition
