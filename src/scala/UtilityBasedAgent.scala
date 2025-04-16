@@ -267,28 +267,38 @@ object UtilityBasedAgent extends AgentFunctionImpl:
                             depth: Int)
 
     infix def plan: Move =
-      val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0))
+      val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
       tree.children.maxBy((m, n) =>
         println(f"$m: ${n.value%.4f}")
         n.value
       )._1.asInstanceOf[Move]
 
-    private def buildTree(root: Node): Node =
+    private def buildTree(root: Node, memo: mutable.Map[BeliefState, Double]): Node =
       val b: BeliefState = root.beliefState
       val d: Int = root.depth
       val obsNode: Boolean = b.lastUpdate.isInstanceOf[Percept4]
       if obsNode then // observation node (cannot be a leaf)
-        val successors: Map[Move | Percept4, Node] =
-          b.possibleMoves.map(m => m -> buildTree(Node(b transition m, 0, Map.empty, d + 1))).toMap
-        val utility: Double = DISCOUNT * successors.values.maxBy(_.value).value
-        Node(b, utility + b.eval, successors, d)
+        memo.get(b) match {
+          case Some(value) => Node(b, value, Map.empty, d)
+          case None =>
+            val successors: Map[Move | Percept4, Node] =
+              b.possibleMoves.map(m => m ->
+                buildTree(Node(b transition m, 0, Map.empty, d + 1), memo)
+              ).toMap
+            val utility: Double = b.eval + (DISCOUNT * successors.values.maxBy(_.value).value)
+            memo += (b -> utility)
+            Node(b, utility, successors, d)
+        }
       else if (root.depth == TIME_HORIZON) || b.isTerminal then // leaf action node
         Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d)
       else // interior action node
         val successors: Map[Move | Percept4, Node] =
-          b.possibleObservations.map(o => o -> buildTree(Node(b observe o, 0, Map.empty, d))).toMap
-        val utility: Double = DISCOUNT * successors.values.map(_.value).sum / successors.size
-        Node(b, utility + b.eval + b.lastUpdate.asInstanceOf[Move].reward, successors, d)
+          b.possibleObservations.map(o => o ->
+            buildTree(Node(b observe o, 0, Map.empty, d), memo)
+          ).toMap
+        val utility: Double =
+          b.eval + b.lastUpdate.asInstanceOf[Move].reward + (DISCOUNT * successors.values.map(_.value).sum / successors.size)
+        Node(b, utility, successors, d)
 
   override def reset(): Unit =
     currentBeliefState = initialBeliefState
