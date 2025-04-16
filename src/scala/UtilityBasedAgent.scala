@@ -269,7 +269,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     infix def plan: Move =
       val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
       tree.children.maxBy((m, n) =>
-        println(f"$m: ${n.value%.4f}")
+        println(f"$m: ${n.value}%.4f")
         n.value
       )._1.asInstanceOf[Move]
 
