@@ -8,8 +8,10 @@
  * 
  */
 import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 import scala.language.postfixOps
-import scala.math.BigDecimal.RoundingMode
 
 object UtilityBasedAgent extends AgentFunctionImpl:
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty
@@ -126,14 +128,14 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         val validRight = !outOfBounds(agentOrientation.rightFrom(agentPosition))
         val validBack = !outOfBounds(agentOrientation.backFrom(agentPosition))
         val inclusionCondition: Map[Move, Boolean] = Move.values.map(m => m -> (m match {
-          case Move.GoForward => validFront
-          case Move.GoLeft => validLeft
-          case Move.GoRight => validRight
-          case Move.GoBack => validBack
-          case Move.Shoot => hasArrow && validFront && o.stench
-          case Move.ShootLeft => hasArrow && validLeft && o.stench
-          case Move.ShootRight => hasArrow && validRight && o.stench
-          case Move.NoOp => true
+          case Move.GoForward => validFront && !o.glitter
+          case Move.GoLeft => validLeft && !o.glitter
+          case Move.GoRight => validRight && !o.glitter
+          case Move.GoBack => validBack && !o.glitter
+          case Move.Shoot => hasArrow && validFront && o.stench && !o.glitter
+          case Move.ShootLeft => hasArrow && validLeft && o.stench && !o.glitter
+          case Move.ShootRight => hasArrow && validRight && o.stench && !o.glitter
+          case Move.NoOp => !o.glitter
           case Move.Grab => o.glitter
         })).toMap
         Move.values.toSet filter inclusionCondition
@@ -222,7 +224,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         ), _.pits exists (neighborsOf(agentPosition) contains)
       ), lastUpdate = o)
 
-    def eval: BigDecimal = (-1000 * numDeaths) + (1000 * numGolds) - belief.size
+    def eval: Double = (-1000 * numDeaths) + (1000 * numGolds) - belief.size
 
     def isTerminal: Boolean = belief isEmpty
 
@@ -241,7 +243,8 @@ object UtilityBasedAgent extends AgentFunctionImpl:
 
   private def initialBeliefState: BeliefState =
     val allSquares: Set[Position] = ((1 to 4) flatMap (x => (1 to 4) map (y => (x, y)))).toSet
-    val possiblePitCombinations: Set[(Position, Position)] = (allSquares - (1 -> 1)).toList.combinations(2).map(l => (l.head, l.tail.head)).toSet
+    val possiblePitCombinations: Set[(Position, Position)] =
+      (allSquares - (1 -> 1)).toList.combinations(2).map(l => (l.head, l.tail.head)).toSet
     val possibleWumpusPositions: Set[Position] = allSquares - (1 -> 1)
     val possibleGoldLocations: Set[Position] = allSquares
 
@@ -259,37 +262,54 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private var currentBeliefState: BeliefState = initialBeliefState
 
   private object FullWidthPlanning:
-    private final val TIME_HORIZON = 5
-    private final val DISCOUNT = BigDecimal(0.8)
+    private final val TIME_HORIZON: Int = 16
+    private final val DISCOUNT: Double = 0.8
 
     private case class Node(beliefState: BeliefState,
-                            value: BigDecimal,
+                            value: Double,
                             children: Map[Move | Percept4, Node],
                             depth: Int)
 
-    infix def plan: Move =
-      val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0))
-      tree.children.maxBy((m, n) =>
-        println(s"$m: ${n.value.setScale(4, RoundingMode.UP)}")
-        n.value
-      )._1.asInstanceOf[Move]
+    infix def planAsync: Future[Move] =
+      buildTreeAsync(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
+        .map(_.children.maxBy((m, n) =>
+          println(f"$m: ${n.value}%.2f")
+          n.value
+        )._1.asInstanceOf[Move])
 
-    private def buildTree(root: Node): Node =
+    private def buildTreeAsync(root: Node, memo: mutable.Map[BeliefState, Double]): Future[Node] =
       val b: BeliefState = root.beliefState
       val d: Int = root.depth
       val obsNode: Boolean = b.lastUpdate.isInstanceOf[Percept4]
       if obsNode then // observation node (cannot be a leaf)
-        val successors: Map[Move | Percept4, Node] =
-          b.possibleMoves.map(m => m -> buildTree(Node(b transition m, 0, Map.empty, d + 1))).toMap
-        val utility: BigDecimal = DISCOUNT * successors.values.maxBy(_.value).value
-        Node(b, utility + b.eval, successors, d)
-      else if (root.depth == TIME_HORIZON) || b.isTerminal then // leaf action node
-        Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d)
+        memo.get(b) match {
+          case Some(value) => Future.successful(Node(b, value, Map.empty, d))
+          case None =>
+            val futureChildren: Seq[Future[(Move | Percept4, Node)]] = b.possibleMoves.toSeq.map(m =>
+              buildTreeAsync(Node(b transition m, 0, Map.empty, d + 1), memo).map(child => m -> child)
+            )
+            for {
+              pairs <- Future.sequence(futureChildren)
+              successors = pairs.toMap
+              utility = b.eval + (DISCOUNT * successors.values.maxBy(_.value).value)
+              updatedRoot = {
+                memo += (b -> utility)
+                Node(b, utility, successors, d)
+              }
+            } yield updatedRoot
+        }
+      else if d == TIME_HORIZON || (b isTerminal) then // leaf action node
+        Future.successful(Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d))
       else // interior action node
-        val successors: Map[Move | Percept4, Node] =
-          b.possibleObservations.map(o => o -> buildTree(Node(b observe o, 0, Map.empty, d))).toMap
-        val utility: BigDecimal = DISCOUNT * successors.values.map(_.value).sum / successors.size
-        Node(b, utility + b.eval + b.lastUpdate.asInstanceOf[Move].reward, successors, d)
+        val futureChildren: Seq[Future[(Move | Percept4, Node)]] = b.possibleObservations.toSeq.map(o =>
+          buildTreeAsync(Node(b observe o, 0, Map.empty, d), memo) map (child => o -> child)
+        )
+        for {
+          pairs <- Future.sequence(futureChildren)
+          successors = pairs.toMap
+          utility = b.eval + b.lastUpdate.asInstanceOf[Move].reward + (DISCOUNT * successors.values.map(_.value).sum / successors.size)
+          updatedRoot = Node(b, utility, successors, d)
+        } yield updatedRoot
 
   override def reset(): Unit =
     currentBeliefState = initialBeliefState
@@ -299,7 +319,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     val percept = Percept4(tp.getBreeze, tp.getStench, tp.getGlitter, tp.getScream)
     if actionQueue isEmpty then
       currentBeliefState = currentBeliefState observe percept
-      val bestMove = FullWidthPlanning.plan
+      val bestMove = Await.result(FullWidthPlanning.planAsync, Duration.Inf)
       currentBeliefState = currentBeliefState transition bestMove
       actionQueue enqueueAll bestMove.toActionSeq()
     // once I get a NO_OP from the forward search, all subsequent actions
