@@ -262,7 +262,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private var currentBeliefState: BeliefState = initialBeliefState
 
   private object FullWidthPlanning:
-    private final val TIME_HORIZON: Int = 5
+    private final val TIME_HORIZON: Int = 6
     private final val DISCOUNT: Double = 0.8
 
     private case class Node(beliefState: BeliefState,
@@ -273,7 +273,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     infix def planAsync: Future[Move] =
       buildTreeAsync(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
         .map(_.children.maxBy((m, n) =>
-          println(f"$m: ${n.value}%.4f")
+          println(f"$m: ${n.value}%.2f")
           n.value
         )._1.asInstanceOf[Move])
 
