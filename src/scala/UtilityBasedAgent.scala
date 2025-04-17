@@ -262,7 +262,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
   private var currentBeliefState: BeliefState = initialBeliefState
 
   private object FullWidthPlanning:
-    private final val TIME_HORIZON: Int = 6
+    private final val TIME_HORIZON: Int = 16
     private final val DISCOUNT: Double = 0.8
 
     private case class Node(beliefState: BeliefState,
@@ -310,7 +310,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
           utility = b.eval + b.lastUpdate.asInstanceOf[Move].reward + (DISCOUNT * successors.values.map(_.value).sum / successors.size)
           updatedRoot = Node(b, utility, successors, d)
         } yield updatedRoot
-  
+
   override def reset(): Unit =
     currentBeliefState = initialBeliefState
     actionQueue.clear()
