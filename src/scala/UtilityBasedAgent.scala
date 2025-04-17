@@ -8,6 +8,9 @@
  * 
  */
 import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 import scala.language.postfixOps
 
 object UtilityBasedAgent extends AgentFunctionImpl:
@@ -267,40 +270,47 @@ object UtilityBasedAgent extends AgentFunctionImpl:
                             children: Map[Move | Percept4, Node],
                             depth: Int)
 
-    infix def plan: Move =
-      val tree = buildTree(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
-      tree.children.maxBy((m, n) =>
-        println(f"$m: ${n.value}%.4f")
-        n.value
-      )._1.asInstanceOf[Move]
+    infix def planAsync: Future[Move] =
+      buildTreeAsync(Node(currentBeliefState, 0, Map.empty, 0), mutable.Map.empty)
+        .map(_.children.maxBy((m, n) =>
+          println(f"$m: ${n.value}%.4f")
+          n.value
+        )._1.asInstanceOf[Move])
 
-    private def buildTree(root: Node, memo: mutable.Map[BeliefState, Double]): Node =
+    private def buildTreeAsync(root: Node, memo: mutable.Map[BeliefState, Double]): Future[Node] =
       val b: BeliefState = root.beliefState
       val d: Int = root.depth
       val obsNode: Boolean = b.lastUpdate.isInstanceOf[Percept4]
       if obsNode then // observation node (cannot be a leaf)
         memo.get(b) match {
-          case Some(value) => Node(b, value, Map.empty, d)
+          case Some(value) => Future.successful(Node(b, value, Map.empty, d))
           case None =>
-            val successors: Map[Move | Percept4, Node] =
-              b.possibleMoves.map(m => m ->
-                buildTree(Node(b transition m, 0, Map.empty, d + 1), memo)
-              ).toMap
-            val utility: Double = b.eval + (DISCOUNT * successors.values.maxBy(_.value).value)
-            memo += (b -> utility)
-            Node(b, utility, successors, d)
+            val futureChildren: Seq[Future[(Move | Percept4, Node)]] = b.possibleMoves.toSeq.map(m =>
+              buildTreeAsync(Node(b transition m, 0, Map.empty, d + 1), memo).map(child => m -> child)
+            )
+            for {
+              pairs <- Future.sequence(futureChildren)
+              successors = pairs.toMap
+              utility = b.eval + (DISCOUNT * successors.values.maxBy(_.value).value)
+              updatedRoot = {
+                memo += (b -> utility)
+                Node(b, utility, successors, d)
+              }
+            } yield updatedRoot
         }
       else if d == TIME_HORIZON || (b isTerminal) then // leaf action node
-        Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d)
+        Future.successful(Node(b, b.lastUpdate.asInstanceOf[Move].reward + b.eval, Map.empty, d))
       else // interior action node
-        val successors: Map[Move | Percept4, Node] =
-          b.possibleObservations.map(o => o ->
-            buildTree(Node(b observe o, 0, Map.empty, d), memo)
-          ).toMap
-        val utility: Double =
-          b.eval + b.lastUpdate.asInstanceOf[Move].reward + (DISCOUNT * successors.values.map(_.value).sum / successors.size)
-        Node(b, utility, successors, d)
-
+        val futureChildren: Seq[Future[(Move | Percept4, Node)]] = b.possibleObservations.toSeq.map(o =>
+          buildTreeAsync(Node(b observe o, 0, Map.empty, d), memo) map (child => o -> child)
+        )
+        for {
+          pairs <- Future.sequence(futureChildren)
+          successors = pairs.toMap
+          utility = b.eval + b.lastUpdate.asInstanceOf[Move].reward + (DISCOUNT * successors.values.map(_.value).sum / successors.size)
+          updatedRoot = Node(b, utility, successors, d)
+        } yield updatedRoot
+  
   override def reset(): Unit =
     currentBeliefState = initialBeliefState
     actionQueue.clear()
@@ -309,7 +319,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     val percept = Percept4(tp.getBreeze, tp.getStench, tp.getGlitter, tp.getScream)
     if actionQueue isEmpty then
       currentBeliefState = currentBeliefState observe percept
-      val bestMove = FullWidthPlanning.plan
+      val bestMove = Await.result(FullWidthPlanning.planAsync, Duration.Inf)
       currentBeliefState = currentBeliefState transition bestMove
       actionQueue enqueueAll bestMove.toActionSeq()
     // once I get a NO_OP from the forward search, all subsequent actions
