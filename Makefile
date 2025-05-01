@@ -45,7 +45,7 @@ build: clean
 	@mkdir -p target & pid=$$!; \
 		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
 		wait $$pid
-	@scalac -d target src/java/*.java src/scala/*.scala & pid=$$!; \
+	@scalac -classpath "lib/*" -d target src/java/*.java src/scala/*.scala & pid=$$!; \
 		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
 		wait $$pid
 	@javac -d target -cp target src/java/*.java & pid=$$!; \
@@ -55,7 +55,7 @@ build: clean
 
 # Run the project
 run: build
-	@scala run -cp target --main-class WorldApplication -- -n 1.00 -a false
+	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.00 -a false
 
 tenk: build
 	@echo "Running the agent 10,000 times..."
