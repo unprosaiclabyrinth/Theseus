@@ -103,7 +103,6 @@ object LLMBasedAgent extends AgentFunctionImpl:
         catch {
           case e: ExceptionInInitializerError =>
             println("*** GOOGLE_API_KEY environment variable is not set.")
-            TheseusBot.stop()
             System.exit(1)
             false
         }
@@ -133,4 +132,3 @@ object LLMBasedAgent extends AgentFunctionImpl:
     println((responseJson \ "belief_state_after_action").as[String])
     TheseusBot.appendToSystemMessage(makeActionString(action))
     action
-
