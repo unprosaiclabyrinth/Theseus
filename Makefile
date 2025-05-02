@@ -1,6 +1,6 @@
 # Default target
 all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla"
+	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla, lba"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
@@ -24,6 +24,13 @@ uba: src/scala/UtilityBasedAgent.scala
 # Change the forward probability in the run recipe
 rla: src/scala/ReactiveLearningAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@make run
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
+
+# LLM-based agent
+# Requires the GOOGLE_API_KEY env var to be set
+lba: src/scala/LLMBasedAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn LLMBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
 	@make run
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
@@ -87,4 +94,4 @@ clean:
 	@rm -rf target
 
 # Phony targets
-.PHONY: sra mra uba rla check build run tenk clean
+.PHONY: sra mra uba rla lba check build run tenk clean
