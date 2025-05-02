@@ -10,10 +10,9 @@
  * at the University of Illinois Chicago
  *
  */
-
 import theseus511.LimerickWeatherBot
 import theseus511.TheseusBot
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsNull, JsValue}
 
 import scala.language.postfixOps
 
@@ -40,9 +39,25 @@ object LLMBasedAgent extends AgentFunctionImpl:
 
   def stop(): Unit =
     if llmClientInitialized then
-      println(LimerickWeatherBot.query("Chicago"))
-      LimerickWeatherBot.stop()
       TheseusBot.stop()
+      try {
+        println(LimerickWeatherBot.query("Chicago"))
+      }
+      catch {
+        case _: Throwable =>
+          println(
+            """
+              |There was supposed to be a limerick on weather,
+              |That promised cool breezes light as feather,
+              |But a glitch showed its face,
+              |With an error message in place,
+              |So here's the bug report–-no limerick altogether.
+              |""".stripMargin
+          )
+      }
+      finally {
+        LimerickWeatherBot.stop()
+      }
 
   private def makeObsString(tp: TransferPercept): String =
     val s: String = "You observe" + (
@@ -63,12 +78,12 @@ object LLMBasedAgent extends AgentFunctionImpl:
 
   private def makeActionString(action: Int): String =
     "You " + (
-      if action == Action.GO_FORWARD then "went forward."
-      else if action == Action.TURN_RIGHT then "turned right."
-      else if action == Action.TURN_LEFT then "turned left."
-      else if action == Action.SHOOT then "shot."
-      else if action == Action.GRAB then "grabbed."
-      else "did nothing."
+      if action == Action.GO_FORWARD then "go forward."
+      else if action == Action.TURN_RIGHT then "turn right."
+      else if action == Action.TURN_LEFT then "turn left."
+      else if action == Action.SHOOT then "shoot."
+      else if action == Action.GRAB then "grab."
+      else "do nothing."
     )
 
   private def throttleLLMClient(): Unit =
@@ -88,6 +103,7 @@ object LLMBasedAgent extends AgentFunctionImpl:
         catch {
           case e: ExceptionInInitializerError =>
             println("*** GOOGLE_API_KEY environment variable is not set.")
+            TheseusBot.stop()
             System.exit(1)
             false
         }
@@ -96,7 +112,17 @@ object LLMBasedAgent extends AgentFunctionImpl:
   override def process(tp: TransferPercept): Int =
     prepareLLMClient()
     TheseusBot.appendToSystemMessage(makeObsString(tp))
-    val responseJson: JsValue = TheseusBot.query(actionPrompt)
+    val responseJson: JsValue =
+      try {
+        TheseusBot.query(actionPrompt)
+      }
+      catch {
+        case _: Throwable =>
+          println("*** Oops! LLM query failed. This happens sometimes.")
+          TheseusBot.stop()
+          System.exit(1)
+          JsNull
+      }
     throttleLLMClient()
     val actionString: String = (responseJson \ "best_action").as[String]
     println(actionString)
@@ -107,3 +133,4 @@ object LLMBasedAgent extends AgentFunctionImpl:
     println((responseJson \ "belief_state_after_action").as[String])
     TheseusBot.appendToSystemMessage(makeActionString(action))
     action
+
