@@ -37,7 +37,7 @@ class Action {
 			case 3 -> "TURN_LEFT";
 			case 4 -> "GRAB";
 			case 5 -> "SHOOT";
-            case 6 -> "NO_OP";
+			case 6 -> "NO_OP";
 			default -> "END_TRIAL";
 		};
 	}
