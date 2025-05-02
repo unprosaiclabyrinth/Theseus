@@ -2,6 +2,8 @@
   <img src="wumpus-world.png" width="500">
 </p>
 
+# Agent Architectures
+
 This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (described in AIMA 4ed with slight variations). The architectures are implemented with the *a priori* knowledge that:
 
 + The agent starts in (1,1), facing east, in a $$4 \times 4$$ grid.
@@ -12,12 +14,14 @@ This project implements different intelligent agent architectures for an agent c
 The agent aims to maximize the **average** score. The different architectures the project implements are:
 
 1. **Simple reflex agent (SRA):** Chooses the next action based solely on the current percept and condition-action rules; stores no internal state, has no memory of past actions/observations, performs no lookahead.
-2. **Model-based reflex agent (MRA):** Maintains a world model that represents the agent's state of knowledge about the world, which is used in conjunction with the observation at every time step to compute the action according to condition-action rules. The world model is updated according to the action that is executed and the observation.
-3. **Utility-based agent (UBA):** *Plans* ahead in time at every time step and computes the action according to the insight gained from the forward search. It executes the action, observes the percepts, and plans from the new state for the next action.
-4. **Reactive Learning Agent (RLA):**  Operates in an **unknown** environment, in which the forward probability (the probability with which the agent goes forward on a `GO_FORWARD` action as opposed to slipping to the left or the right) is unknown. A forward probability of 1 means that the environment is completely deterministic. The forward probability is one of three values: 1, 0.8, or $$\frac{1}{3}$$, but the RLA doesn't know which *a priori*. The RLA spends some time collecting data through experience, from which it learns the forward probability using maximum likelihood estimation (MLE). This is the exploration phase. Once the forward probability is learnt, the RLA switches to the exploitation phase, where it uses the learnt forward probability along with the known transition model to navigate the environment and maximize its score.
-5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM: at each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
 
-# Agent Architectures
+2. **Model-based reflex agent (MRA):** Maintains a world model that represents the agent's state of knowledge about the world, which is used in conjunction with the observation at every time step to compute the action according to condition-action rules. The world model is updated according to the action that is executed and the observation.
+
+3. **Utility-based agent (UBA):** *Plans* ahead in time at every time step and computes the action according to the insight gained from the forward search. It executes the action, observes the percepts, and plans from the new state for the next action.
+
+4. **Reactive Learning Agent (RLA):**  Operates in an **unknown** environment, in which the forward probability (the probability with which the agent goes forward on a `GO_FORWARD` action as opposed to slipping to the left or the right) is unknown. A forward probability of 1 means that the environment is completely deterministic. The forward probability is one of three values: 1, 0.8, or $$\frac{1}{3}$$, but the RLA doesn't know which *a priori*. The RLA spends some time collecting data through experience, from which it learns the forward probability using maximum likelihood estimation (MLE). This is the exploration phase. Once the forward probability is learnt, the RLA switches to the exploitation phase, where it uses the learnt forward probability along with the known transition model to navigate the environment and maximize its score.
+
+5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM. At each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
 
 # Getting Started
 
