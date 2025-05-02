@@ -12,7 +12,6 @@ This project implements different intelligent agent architectures for an agent c
 + A `NO_OP` is a possible action that does nothing. It has no cost, unlike other actions.
 
 The agent aims to maximize the **average** score. The different architectures the project implements are:
-
 1. **Simple reflex agent (SRA):** Chooses the next action based solely on the current percept and condition-action rules; stores no internal state, has no memory of past actions/observations, performs no lookahead.
 
 2. **Model-based reflex agent (MRA):** Maintains a world model that represents the agent's state of knowledge about the world, which is used in conjunction with the observation at every time step to compute the action according to condition-action rules. The world model is updated according to the action that is executed and the observation.
@@ -62,7 +61,7 @@ The project was tested using:
 ## Proper protocol for custom implementations
 
 1. Implement the custom agent in a `src/scala/CustomAgent.scala` object that extends the `AgentFunctionImpl` trait.
-2. Override and define the abstract `process` method such that it returns the actions given the percepts. Replace the "specify agent" line (line 21) in `src/java/AgentFunction.java` with:-
+2. Override and define the abstract `process` method such that it returns the actions given the percepts. Replace the "specify agent" line (line 21) in `src/java/AgentFunction.java` with:
 ```java
 return CustomAgent.process(tp) // specify agent
 ```
