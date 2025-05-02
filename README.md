@@ -50,7 +50,7 @@ The LLM-based agent can be run using:
 # Requires the GOOGLE_API_KEY environment variable to be set
 make lba
 ```
-The current implementation of the agent function or a custom implementation (**note: if [proper protocol](#proper-protocol-for-custom-implementations) or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra`, `mra`, `uba`, `rla`, and `lba` targets altogether**) can be run using:-
+The current implementation of the agent function or a custom implementation (**note: if [proper protocol](#proper-protocol-for-custom-implementations) or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra`, `mra`, `uba`, `rla`, and `lba` targets altogether**) can be run using:
 ```zsh
 make run
 ```
@@ -76,13 +76,13 @@ The `reports` directory contains documents detailing the agent designs.
 
 # Evaluation
 
-The agent architectures are generally evaluated on their average score after 10,000 runs. The `scores` directory contains the score lists for 10,000 runs for all agents, whose summary statistics are provided in the respective reports. The 10,000 trials can be run using:-
+The agent architectures are generally evaluated on their average score after 10,000 runs. The `scores` directory contains the evaluation score lists for all agents, whose summary statistics are provided in the respective reports. Feel free to run your own trials. Of course, the `run` recipe can be updated with the `-t` option for multiple trials. Since 10,000 is a common number of trials for evaluation, a separate `make` target called `tenk` is provided that runs 10,000 trials of the current agent implementation. The score for each trial and the average score is written to "wumpus_out.txt" or to the output file you specify using the `-f` option in the recipe. The 10,000 trials can be run using:
 ```zsh
 make tenk
 ```
-**Note that the above command runs 10,000 trials for the *current* implementation.** Feel free to run your own trials. Of course, the `run` recipe can be updated with the `-t` option for multiple trials. Since 10,000 is a common number of trials for evaluation, a separate `make` target called `tenk` is provided that runs 10,000 trials of the current agent implementation. The score for each trial and the average score is written to "wumpus_out.txt" or to the output file you specify using the `-f` option in the recipe.
+**Note that the above command runs 10,000 trials for the *current* implementation.** Certain agent architectures like the UBA and LBA may take a significant amount of time to run the 10,000 trial, in which case, the number of trials can be reduced by modifying the `-t` option in the `tenk` recipe in the Makefile.
 
-A sample evaluation target is separately provided for learning agent architectures that have to learn the forward probability from an *a priori* unknown environment. It runs the *current* implementation for 3,334 trials with a forward probability of 1, 3,333 trials with a forward probability of 0.8, and 3,333 trials with a forward probability of 0.3334, making a total of 10,000 trials. It can be run using:-
+A 10k-evaluation target is separately provided for learning agent architectures that have to learn the forward probability from an *a priori* unknown environment. It runs the *current* implementation for 3,334 trials with a forward probability of 1, 3,333 trials with a forward probability of 0.8, and 3,333 trials with a forward probability of 0.3334, making a total of 10,000 trials. Hence, it assumes a uniform prior on the forward probability (so that Bayesian and frequentist approaches align). It can be run using:
 ```zsh
 make la-tenk
 ```
