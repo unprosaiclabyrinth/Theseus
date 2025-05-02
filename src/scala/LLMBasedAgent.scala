@@ -41,12 +41,14 @@ object LLMBasedAgent extends AgentFunctionImpl:
     if llmClientInitialized then
       TheseusBot.stop()
       try {
+        println()
         println(LimerickWeatherBot.query("Chicago"))
       }
       catch {
         case _: Throwable =>
           println(
             """
+              |
               |There was supposed to be a limerick on weather,
               |That promised cool breezes light as feather,
               |But a glitch showed its face,
@@ -124,11 +126,10 @@ object LLMBasedAgent extends AgentFunctionImpl:
       }
     throttleLLMClient()
     val actionString: String = (responseJson \ "best_action").as[String]
-    println(actionString)
     val action = string2Action.keySet
       .find(actionString contains)
       .flatMap(string2Action get)
       .getOrElse(Action.NO_OP)
-    println((responseJson \ "belief_state_after_action").as[String])
+    println(s"\"${(responseJson \ "belief_state_after_action").as[String]}\"")
     TheseusBot.appendToSystemMessage(makeActionString(action))
     action
