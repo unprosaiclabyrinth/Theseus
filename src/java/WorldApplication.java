@@ -142,9 +142,10 @@ class WorldApplication {
 				SimpleReflexAgent.reset(); // reset SRA
 				ModelBasedReflexAgent.reset(); // reset MRA
 				UtilityBasedAgent.reset(); // reset UBA
-                ReactiveLearningAgent.reset(); // reset RLA
-
+				ReactiveLearningAgent.reset(); // reset RLA
+				LLMBasedAgent.reset(); // reset LBA
 		    }
+			LLMBasedAgent.stop();
 
 		    for (int i = 0; i < numTrials; i++) {
 		    	System.out.println("Trial " + (i+1) + " score: " + trialScores[i]);
