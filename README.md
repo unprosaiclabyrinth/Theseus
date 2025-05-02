@@ -21,7 +21,7 @@ The agent aims to maximize the **average** score. The different architectures th
 
 4. **Reactive Learning Agent (RLA):**  Operates in an **unknown** environment, in which the forward probability (the probability with which the agent goes forward on a `GO_FORWARD` action as opposed to slipping to the left or the right) is unknown. A forward probability of 1 means that the environment is completely deterministic. The forward probability is one of three values: 1, 0.8, or $$\frac{1}{3}$$, but the RLA doesn't know which *a priori*. The RLA spends some time collecting data through experience, from which it learns the forward probability using maximum likelihood estimation (MLE). This is the exploration phase. Once the forward probability is learnt, the RLA switches to the exploitation phase, where it uses the learnt forward probability along with the known transition model to navigate the environment and maximize its score.
 
-5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM &mdash; Google's Gemini 2.0 Flash model. At each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
+5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM&mdash;Google's Gemini 2.0 Flash model. At each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
 
 # Getting Started
 
