@@ -35,7 +35,8 @@ object LLMBasedAgent extends AgentFunctionImpl:
   private final val actionPrompt: String =
     "Choose one action to execute out of go forward, turn left, turn right, shoot, grab, or do nothing."
 
-  override def reset(): Unit = TheseusBot.reset()
+  override def reset(): Unit =
+    if llmClientInitialized then TheseusBot.reset()
 
   def stop(): Unit =
     if llmClientInitialized then
