@@ -20,7 +20,7 @@ import scala.language.postfixOps
  * Requires `GOOGLE_API_KEY` environment variable to be set.
  */
 object LLMBasedAgent extends AgentFunctionImpl:
-  private var llmClientInitialized: Boolean = false
+  private var llmClientIsInitialized: Boolean = false
   private var intervalStartTime: Long = -1
 
   private val string2Action: Map[String, Int] = Map(
@@ -36,10 +36,10 @@ object LLMBasedAgent extends AgentFunctionImpl:
     "Choose one action to execute out of go forward, turn left, turn right, shoot, grab, or do nothing."
 
   override def reset(): Unit =
-    if llmClientInitialized then TheseusBot.reset()
+    if llmClientIsInitialized then TheseusBot.reset()
 
   def stop(): Unit =
-    if llmClientInitialized then
+    if llmClientIsInitialized then
       TheseusBot.stop()
       try {
         println()
@@ -97,8 +97,8 @@ object LLMBasedAgent extends AgentFunctionImpl:
     intervalStartTime = System.currentTimeMillis
 
   private def prepareLLMClient(): Unit =
-    if !llmClientInitialized then
-      llmClientInitialized = {
+    if !llmClientIsInitialized then
+      llmClientIsInitialized = {
         try {
           theseus511.TheseusBot
           true
