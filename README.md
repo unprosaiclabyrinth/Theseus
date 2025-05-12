@@ -41,9 +41,11 @@ The utility-based agent can be run using:
 ```zsh
 make uba
 ```
-The reactive learning agent can be run using:
+Since the reactive learning agent operates in an environment with an unknown forward probability out of 1, 0.8, and $$\frac{1}{3}$$, there are three Makefile targets that run the RLA with different forward probability settings:
 ```zsh
-make rla
+make rla-deterministic # FP = 1
+make rla-biased        # FP = 0.8
+make rla-uniform       # FP = 0.3334
 ```
 The LLM-based agent can be run using:
 ```zsh

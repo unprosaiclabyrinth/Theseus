@@ -1,6 +1,6 @@
 # Default target
 all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla, lba"
+	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla-deterministic, rla-biased, rla-uniform, lba"
 
 # Simple reflex agent
 sra: src/scala/SimpleReflexAgent.scala
@@ -21,10 +21,28 @@ uba: src/scala/UtilityBasedAgent.scala
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # Reactive learning agent
-# Change the forward probability in the run recipe
 rla: src/scala/ReactiveLearningAgent.scala
+	@echo "RLA targets are: rla-deterministic, rla-biased, rla-uniform. Specify one of these targets to run the RLS with the corresponding forward probability."
+
+# Reactive learning agent with deterministic forward probability
+rla-deterministic: src/scala/ReactiveLearningAgent.scala
 	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make run
+	@make build
+	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.00 -a false
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
+
+# Reactive learning agent with biased forward probability
+rla-biased: src/scala/ReactiveLearningAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@make build
+	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.8 -a false
+	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
+
+# Reactive learning agent with uniform forward probability
+rla-uniform: src/scala/ReactiveLearningAgent.scala
+	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
+	@make build
+	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.3334 -a false
 	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
 
 # LLM-based agent
@@ -94,4 +112,4 @@ clean:
 	@rm -rf target
 
 # Phony targets
-.PHONY: sra mra uba rla lba check build run tenk clean
+.PHONY: sra mra uba rla-deterministic rla-biased rla-uniform lba check build run tenk clean
