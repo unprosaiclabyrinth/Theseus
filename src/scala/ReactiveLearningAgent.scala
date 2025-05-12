@@ -217,7 +217,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       BeliefState(ao, ha, alive.map((u, p) => u -> p/(if t == 0 then sz else t)), prevAction = move)
 
     def sampleState: State =
-      val sorted = belief.toList.sortBy(_._2)(Ordering[BigDecimal].reverse).toMap
+      val sorted = belief.toList.sortBy(_._2)(using Ordering[BigDecimal].reverse).toMap
 
       val totalProbability = sorted.values.sum
       require(totalProbability > 0, "Total probability must be positive.")
