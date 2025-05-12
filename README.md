@@ -1,4 +1,4 @@
-[![Release](https://img.shields.io/github/v/release/unprosaiclabyrinth/Theseus)](https://github.com/unprosaiclabyrinth/Theseus/releases)
+[![Release](https://img.shields.io/github/v/tag/unprosaiclabyrinth/Theseus?label=Release&sort=semver)](https://github.com/unprosaiclabyrinth/Theseus/releases)
 
 <p align="center">
   <img src="wumpus-world.png" width="500">
