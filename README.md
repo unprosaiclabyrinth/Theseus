@@ -1,3 +1,5 @@
+[![Release](https://img.shields.io/github/v/release/unprosaiclabyrinth/Theseus)](https://github.com/unprosaiclabyrinth/Theseus/releases)
+
 <p align="center">
   <img src="wumpus-world.png" width="500">
 </p>
