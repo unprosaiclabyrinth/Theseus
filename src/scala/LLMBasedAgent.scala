@@ -10,8 +10,8 @@
  * at the University of Illinois Chicago
  *
  */
-import theseus511.LimerickWeatherBot
-import theseus511.TheseusBot
+import theseus.LimerickWeatherBot
+import theseus.TheseusBot
 import play.api.libs.json.{JsNull, JsValue}
 
 import scala.language.postfixOps
@@ -100,7 +100,7 @@ object LLMBasedAgent extends AgentFunctionImpl:
     if !llmClientIsInitialized then
       llmClientIsInitialized = {
         try {
-          theseus511.TheseusBot
+          theseus.TheseusBot
           true
         }
         catch {

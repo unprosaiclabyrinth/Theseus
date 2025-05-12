@@ -24,6 +24,6 @@ class AgentFunction {
 	// public method to return the agent's name
 	// do not remove this method
 	public String getAgentName() {
-		return "Theseus511";
+		return "Theseus";
 	}
 }

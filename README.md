@@ -4,7 +4,7 @@
 
 # Agent Architectures
 
-This project implements different intelligent agent architectures for an agent called `Theseus511` that operates in the wumpus world (described in AIMA 4ed with slight variations). The architectures are implemented with the *a priori* knowledge that:
+This project implements different intelligent agent architectures for an agent called `Theseus` that operates in the wumpus world (described in AIMA 4ed with slight variations). The architectures are implemented with the *a priori* knowledge that:
 
 + The agent starts in (1,1), facing east, in a $$4 \times 4$$ grid.
 + There are exactly two pits in the world.
