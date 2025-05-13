@@ -60,7 +60,7 @@ make run
 ```
 The project was tested using:
 
-+ **Scala Version:** 3.6.3/3.6.4
++ **Scala Version:** 3.7.0
 + **Java Version:** OpenJDK 22.0.1
 
 ## Proper protocol for custom implementations
