@@ -29,7 +29,7 @@ trait AgentFunctionImpl:
     // make the new numerator and denominator available publicly
     private val hcf: BigInt = n gcd d
     val numer: BigInt = if d < 0 then -n / hcf else n / hcf
-    val denom: BigInt = d / hcf
+    val denom: BigInt = d.abs / hcf
 
     /**
      * Allow equality-checking using `==` and `!=` of Rationals.
@@ -113,6 +113,7 @@ trait AgentFunctionImpl:
 
   // Class of rational probabilities
   case class Probability(n: BigInt, d: BigInt) extends Rational(n, d):
+    require(numer >= 0, "Probability weight must be nonnegative.")
     /**
      * Allow addition using `+` of Probabilities to return a Probability.
      * @param that the other addend.
@@ -193,10 +194,15 @@ trait AgentFunctionImpl:
       weightedActions.values.toList.foldLeft(Probability(0, 1))((acc, p) => acc + p) == Probability(1, 1),
       "Probabilities are not normalized."
     )
-    val theLcm = weightedActions.values.toList.foldLeft(BigInt(1))((acc, p) => lcm(acc, p.denom))
-    randomElem(
-      weightedActions.flatMap((action, p) => List.fill((theLcm * p.numer / p.denom).intValue)(action)).toList
-    )
+    // Sample an integer ticket without allocating one list entry per ticket.
+    val total = weightedActions.values.foldLeft(BigInt(1))((acc, p) => lcm(acc, p.denom))
+    var ticket = BigInt(total.bitLength, scala.util.Random)
+    while ticket >= total do ticket = BigInt(total.bitLength, scala.util.Random)
+    var cumulative = BigInt(0)
+    weightedActions.iterator.find { (_, p) =>
+      cumulative += total * p.numer / p.denom
+      ticket < cumulative
+    }.map(_._1).getOrElse(throw new IllegalStateException("No action in normalized distribution."))
 
   // Method that resets the agent in case of multiple trials
   def reset(): Unit

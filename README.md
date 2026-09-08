@@ -23,73 +23,122 @@ The agent aims to maximize the **average** score over a large number of trials. 
 
 4. **Reactive Learning Agent (RLA):**  Operates in an **unknown** environment, in which the forward probability (the probability with which the agent goes forward on a `GO_FORWARD` action as opposed to slipping to the left or the right) is unknown. A forward probability of 1 means that the environment is completely deterministic. The forward probability is one of three values: 1, 0.8, or $$\frac{1}{3}$$, but the RLA doesn't know which *a priori*. The RLA spends some time collecting data through experience, from which it learns the forward probability using maximum likelihood estimation (MLE). This is the exploration phase. Once the forward probability is learnt, the RLA switches to the exploitation phase, where it uses the learnt forward probability along with the known transition model to navigate the environment and maximize its score.
 
-5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM&mdash;Google's Gemini 2.0 Flash model. At each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
+5. **LLM-Based Agent (LBA):** Defers the entire decision-making process to an LLM&mdash;a configurable Google Gemini model. At each step, the accumulated percept history is encoded into a natural-language prompt, which is then submitted to the model along with a JSON specification defining a rough layout for the response.
 
 # Getting Started
 
-All agent architectures are implemented in Scala. The `src` directory contains the source code for the wumpus world simulator and the agent implementation. The project repo contains a Makefile that automates building and running the different agents. The Makefile runs the project with the options `forwardProbability (-n)` set to 1 and `randomAgentLoc (-r)` set to `false`. It contains a `check` target that checks the system for the necessary tools (`scala`, `java`). It is recommended that the system is checked for the necessary tools before running the project. The check command is:
-```zsh
+Requires a full **JDK 21 or newer** and **Scala CLI** (the modern `scala` command).
+The compiler is pinned to Scala 3.8.3 in `project.scala`. Install Scala CLI from
+[its installation guide](https://scala-cli.virtuslab.org/install/) and a JDK before running:
+
+```sh
+git clone https://github.com/unprosaiclabyrinth/Theseus.git
+cd Theseus
 make check
-```
-The simple reflex agent can be run using:
-```zsh
-make sra
-```
-The model-based reflex agent can be run using:
-```zsh
+make build
+make test
 make mra
 ```
-The utility-based agent can be run using:
-```zsh
-make uba
+
+The build works with POSIX shells on macOS and Linux. It compiles Scala and Java
+explicitly, with no background build server. Dependencies are downloaded from
+Maven Central on the first build. No precompiled application JAR is required.
+`project.scala` declares the JSON library and compiler versions.
+
+Agent targets are `sra`, `mra`, `uba`, `rla-deterministic`, `rla-biased`,
+`rla-uniform`, and `lba`. `make run` uses UBA. Selecting an agent never edits
+source files or creates backups. To choose runtime settings:
+
+```sh
+./scripts/run.sh --help
+./scripts/run.sh --agent mra -t 100 -r 42 --quiet -f mra-results.txt
+./scripts/run.sh --agent rla -n 0.8 -t 100 -r 42 --quiet -f rla-results.txt
 ```
-Since the reactive learning agent operates in an environment with an unknown forward probability out of 1, 0.8, and $$\frac{1}{3}$$, there are three Makefile targets that run the RLA with different forward probability settings:
-```zsh
-make rla-deterministic # FP = 1
-make rla-biased        # FP = 0.8
-make rla-uniform       # FP = 0.3334
-```
-The LLM-based agent can be run using:
-```zsh
-# Requires the GOOGLE_API_KEY environment variable to be set
+
+Options:
+
+| Option | Meaning |
+| --- | --- |
+| `--agent` | `sra`, `mra`, `uba`, `rla`, or `lba`; default `uba` |
+| `-t` | Positive number of trials; default 1 |
+| `-s` | Positive maximum number of steps per trial; default 50 |
+| `-r` | Integer random seed; generated and printed if omitted |
+| `-n` | Finite forward probability in [0,1]; default 1 |
+| `-f` | Trace/summary filename; default `wumpus_out.txt` |
+| `--scores` | Score CSV filename; default `<trace filename>.scores.csv` |
+| `--quiet` | Omit step traces and agent chatter; retain summary and scores |
+| `--mixed` | Cycle RLA trials through probabilities 1, 0.8, and 1/3 |
+
+Bundled agents assume a 4x4 world and a fixed start at (1,1), facing east.
+Unsupported dimensions or random starting locations are rejected. MRA and UBA
+require deterministic movement. RLA supports 1, 0.8, and approximately 1/3.
+
+Output files are overwritten when a run starts. Use distinct filenames for
+results you want to keep or for concurrent runs. Failed trials are not included
+as successful scores; failures return a nonzero exit status. Completed score
+rows are flushed after each trial. Agent state is reset before and after each
+trial. Concurrent simulations inside one JVM are unsupported because the
+educational agent implementations use singleton state.
+
+## LLM agent
+
+```sh
+export GOOGLE_API_KEY='your-key'
+# Optional; choose a Gemini model available to your account:
+export GOOGLE_MODEL='gemini-2.5-flash'
 make lba
 ```
-The current implementation of the agent function or a custom implementation (**note: if [proper protocol](#proper-protocol-for-custom-implementations) or formatting is not followed, or the custom AgentFunction results in an error, the custom run could lead to junk backup files in the `src/java` directory, or could break the `sra`, `mra`, `uba`, `rla`, and `lba` targets altogether**) can be run using:
-```zsh
-make run
+
+The LLM agent sends game observations and executed actions to Google's
+[Gemini API](https://ai.google.dev/gemini-api/docs/openai). Calls may incur API
+charges. The key is sent in an HTTPS authorization header, not in a URL or shell
+command. The client is included as source, limits each request to 30 seconds,
+spaces requests by at least four seconds, and accepts only six exact action
+names from validated JSON. API or response errors fail the run with a nonzero
+status. Shutdown closes the client without making additional requests.
+
+The default model is configurable because model availability changes. Offline
+regression tests exercise parsing and request timing without using credentials
+or making paid requests. The historical Gemini 2.0 client JAR has been removed.
+
+## Custom agents
+
+Implement `AgentFunctionImpl` with `process(TransferPercept): Int` and `reset(): Unit`.
+Register the implementation in `AgentFunction` and its name in the CLI validator,
+or pass `new AgentFunction(name, implementation)` directly to `Simulation`.
+Return one of the `Action` constants. `END_TRIAL` stops the trial without cost;
+unknown action values fail the run. `reset()` must clear all trial-local state.
+There are no required source comments, line numbers, or backup-file protocols.
+
+# Design and Evaluation
+
+The `reports/` PDFs and `scores/` files are **historical results for the original
+Spring 2025 implementation**. They are preserved unchanged and do not describe
+all subsequent correctness fixes. In particular, old scores must not be treated
+as benchmarks for the corrected planner, learner, or LLM client.
+
+```sh
+make tenk       # 10,000 UBA trials
+make la-tenk    # 10,000 RLA trials split across the three environments
 ```
-The project was tested using:
 
-+ **Scala Version:** 3.7.0
-+ **Java Version:** OpenJDK 22.0.1
+The mixed run records every trial in one CSV, including seed, agent, movement
+probability, and score. It produces one weighted overall mean and does not
+replace earlier probability groups' scores. For comparable experiments, use
+explicit seeds, identical world settings and step limits, and record the source
+revision. The seed controls world generation, stochastic movement, and agent
+sampling. Reproducibility assumes the same compiler/runtime and algorithm;
+remote LLM responses are not deterministic.
 
-## Proper protocol for custom implementations
+The UBA's search is expensive: use small trial counts first. Its simulator now
+terminates at successful grabs and deaths, and real actions are selected by
+estimated value rather than a search exploration bonus. The MRA treats only
+logically certain hazards as permanent facts. The RLA uses a discrete maximum
+likelihood estimate over its supported probabilities; finite samples can still
+misidentify the environment. If later observations contradict its belief, the RLA
+switches to cautious reflex actions instead of choosing from an impossible model.
 
-1. Implement the custom agent in a `src/scala/CustomAgent.scala` object that extends the `AgentFunctionImpl` trait.
-2. Override and define the abstract `process` method such that it returns the actions given the percepts. Replace the "specify agent" line (line 21) in `src/java/AgentFunction.java` with:
-```java
-return CustomAgent.process(tp) // specify agent
-```
-3. Make sure that you have copied the comment verbatim and have ended the line with it.
-4. Make sure to override and define the `reset` method for your agent and reset it (call `reset`) if necessary in WorldApplication.java just under line 162.
-4. Run `make run` to run the agent.
-
-Following these steps will not break the `sra`, `mra`, `uba`, `rla`, and `lba` targets.
-
-# Design
-
-The `reports` directory contains documents detailing the agent designs.
-
-# Evaluation
-
-The agent architectures are generally evaluated on their average score after 10,000 runs. The `scores` directory contains the evaluation score lists for all agents, whose summary statistics are provided in the respective reports. Feel free to run your own trials. Of course, the `run` recipe can be updated with the `-t` option for multiple trials. Since 10,000 is a common number of trials for evaluation, a separate `make` target called `tenk` is provided that runs 10,000 trials of the current agent implementation. The score for each trial and the average score is written to "wumpus_out.txt" or to the output file you specify using the `-f` option in the recipe. The 10,000 trials can be run using:
-```zsh
-make tenk
-```
-**Note that the above command runs 10,000 trials for the *current* implementation.** Certain agent architectures like the UBA and LBA may take a significant amount of time to run the 10,000 trial, in which case, the number of trials can be reduced by modifying the `-t` option in the `tenk` recipe in the Makefile.
-
-A 10k-evaluation target is separately provided for learning agent architectures that have to learn the forward probability from an *a priori* unknown environment. It runs the *current* implementation for 3,334 trials with a forward probability of 1, 3,333 trials with a forward probability of 0.8, and 3,333 trials with a forward probability of 0.3334, making a total of 10,000 trials. Hence, it assumes a uniform prior on the forward probability (so that Bayesian and frequentist approaches align). It can be run using:
-```zsh
-make la-tenk
-```
-As before, the score for each trial and the average scores for the three different modes are written to "wumpus_out.txt" or to the output file you specify using the `-f` option in the recipe.
+The repository remains an educational implementation. There is no claim of
+optimal policy performance or a completed security audit. No license has been
+added: the inherited simulator's attribution remains intact, and redistribution
+terms need to be established by the repository owner.

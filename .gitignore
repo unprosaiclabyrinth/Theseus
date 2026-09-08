@@ -4,3 +4,4 @@ wumpus_*.txt
 .scala-build
 release
 update.sh
+*.scores.csv

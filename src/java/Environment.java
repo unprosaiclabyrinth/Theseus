@@ -37,7 +37,7 @@ class Environment {
 		percepts = new char[worldSize][worldSize][4];
 		outputWriter = outWriter;
 		
-		prevAgentPosition = getAgentLocation();
+		prevAgentPosition = new int[2];
 		
 		bump = false;
 		scream = false;
@@ -49,6 +49,8 @@ class Environment {
 			}
 		}
 		
+		System.arraycopy(getAgentLocation(), 0, prevAgentPosition, 0, 2);
+
 		// initialize percept map
 		for (int i = 0; i < worldSize; i++) {
 			for (int j = 0; j < worldSize; j++) {
@@ -293,7 +295,7 @@ class Environment {
 			outputWriter.write("\n");
 		}
 		catch (Exception e) {
-			System.out.println("An exception was thrown: " + e);
+			throw new IllegalStateException("Could not write environment output.", e);
 		}
 	}
 }

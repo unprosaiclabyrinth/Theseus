@@ -45,13 +45,21 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      * @return the new (successor/next) state
      */
     def transition(m: Move): State =
+      if isTerminal then return this
+      if m == Move.Grab && (this match {
+        case s: StateWithWumpus => s.agentPosition == s.u.gold
+        case s: StateSansWumpus => s.agentPosition == s.u.gold
+        case Won => false
+      }) then return Won
       val dummy = (this match {
         case s: StateWithWumpus => BeliefState(s.agentPosition, s.agentOrientation, s.hasArrow, Set(s.u), History.empty)
         case s: StateSansWumpus => BeliefState(s.agentPosition, s.agentOrientation, false, Set(s.u), History.empty)
+        case Won => return Won
       }).transition(m)
       if dummy.belief.isEmpty then this match {
         case s: StateWithWumpus => StateWithWumpus(dummy.agentPosition, dummy.agentOrientation, dummy.hasArrow, s.u)
         case s: StateSansWumpus => StateSansWumpus(dummy.agentPosition, dummy.agentOrientation, s.u)
+        case Won => Won
       }
       else dummy.u2State(dummy.belief.head)
 
@@ -61,9 +69,15 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      * @return the immediate reward on executing the move.
      */
     def reward(m: Move): Int =
+      if isTerminal then return 0
       val successor = transition(m)
       {
-        if successor.isTerminal then -1000
+        if successor == Won then 1000
+        else if successor.isTerminal then -1000 - (m match {
+          case Move.GoLeft | Move.GoRight => 1
+          case Move.GoBack => 2
+          case _ => 0
+        })
         else m match {
           case Move.GoForward => -1
           case Move.GoLeft | Move.GoRight => -2
@@ -84,23 +98,17 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      * @param m a move
      * @return the "added" reward on executing the move.
      */
-    def heuristic(m: Move): Int =
-     val successor = transition(m)
-     // The distance to the gold is a big one
-     def goldDist(state: State): Int =
-       state match {
-         case s: StateWithWumpus => manhattanDistance(s.u.gold, s.agentPosition)
-         case s: StateSansWumpus => manhattanDistance(s.u.gold, s.agentPosition)
-       }
-     val h1 = -4 * (goldDist(successor) - goldDist(this))
-     // Assign a "wumpus score"
-     def wumpusScore(state: State): Int =
-       state match {
-         case s: StateWithWumpus => 0
-         case s: StateSansWumpus => 9
-       }
-     val h2 = wumpusScore(successor) - wumpusScore(this)
-     h1 + h2
+    def heuristic(m: Move): BigDecimal =
+      def potential(state: State): BigDecimal = state match {
+        case s if s.isTerminal => 0
+        case s: StateWithWumpus => -4 * manhattanDistance(s.u.gold, s.agentPosition)
+        case s: StateSansWumpus => -4 * manhattanDistance(s.u.gold, s.agentPosition) + 9
+        case Won => 0
+      }
+      if isTerminal then 0 else POMCP.DISCOUNT * potential(transition(m)) - potential(this)
+
+  private case object Won extends State:
+    override def isTerminal: Boolean = true
 
   // States with wumpus alive and those with wumpus dead are modeled and handled separately
   // They inherit from State.
@@ -501,7 +509,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     private final val TIME_HORIZON = 15
     private final val DISCOUNT_HORIZON = 0
     private final val NUM_SIMULATIONS = 1000
-    private final val DISCOUNT = BigDecimal(0.2)
+    final val DISCOUNT = BigDecimal(0.2)
     private final val EXPLORATION_CONST = BigDecimal(sqrt(2)) // used in UCT - UCB1
 
     /**
@@ -667,6 +675,12 @@ object UtilityBasedAgent extends AgentFunctionImpl:
             case o: Percept4 => assert(false, "selectionPolicy: Finding an observation child is not possible.")
           }
 
+      // Exploration bonuses guide simulations, never the real action choice.
+      def bestMove(n: Int): Move =
+        nodes(n).children.toList.collect {
+          case (m: Move, c) if nodes(c).visitedCount > 0 => (m, nodes(c).value)
+        }.maxBy(_._2)._1
+
       /**
        * Retrieve the belief state at a node in the MCST
        * @param n a node index in the MCST
@@ -736,7 +750,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
         val s: State = Tree.beliefStateAt(Tree.root).sampleState
         simulate(s, Tree.root, 0)
       )
-      val bestMove = Tree.selectionPolicy(Tree.root)._1
+      val bestMove = Tree.bestMove(Tree.root)
       // prune root parent since its job is done in UCB1 computation
       Tree.pruneRootParent()
       bestMove
@@ -751,7 +765,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      */
     private def simulate(s: State, n: Int, depth: Int): BigDecimal =
       if (depth >= TIME_HORIZON || DISCOUNT.pow(depth) <= DISCOUNT_HORIZON) && depth > 0 then 0.0
-      else if s.isTerminal then -1000.0
+      else if s.isTerminal then 0.0
       else if Tree.isLeaf(n) then
         Tree.beliefStateAt(n).possibleMoves.foreach(m => Tree.expandFrom(n, m))
         val playoutVal: BigDecimal = rollout(s, Tree.beliefStateAt(n), depth)
@@ -798,6 +812,7 @@ object UtilityBasedAgent extends AgentFunctionImpl:
     private def generate(s: State, m: Move): (State, Percept4, BigDecimal) =
       val successor = s.transition(m)
       successor match {
+        case Won => (Won, Percept4(false, false, false, false), s.reward(m) + s.heuristic(m))
         case sWithWumpus: StateWithWumpus => (sWithWumpus, Percept4(
           neighborsOf(sWithWumpus.agentPosition) contains sWithWumpus.u.wumpus,
           neighborsOf(sWithWumpus.agentPosition).intersect(sWithWumpus.u.pits).nonEmpty,
@@ -821,7 +836,8 @@ object UtilityBasedAgent extends AgentFunctionImpl:
      */
     private def rollout(s: State, b: BeliefState, depth: Int): BigDecimal =
       if (depth >= TIME_HORIZON || DISCOUNT.pow(depth) <= DISCOUNT_HORIZON) && depth > 0 then 0.0
-      else if s.isTerminal || b.isTerminal then -1000.0
+      else if s.isTerminal then 0.0
+      else if b.isTerminal then throw new IllegalStateException("Empty belief for a live rollout.")
       else
         val m = rolloutPolicy(b)
         val (successor, o, r) = generate(s, m)
@@ -903,9 +919,12 @@ object UtilityBasedAgent extends AgentFunctionImpl:
    * @return the action to be executed by the utility-based agent.
    */
   override def process(tp: TransferPercept): Int =
+    if tp.getGlitter then
+      actionQueue.clear()
+      return Action.GRAB
     if actionQueue.isEmpty then
       POMCP.pruneTree(Percept4(tp.getStench, tp.getBreeze, tp.getGlitter, tp.getScream))
       val bestMove = POMCP.plan // search
       POMCP.pruneTree(bestMove)
       actionQueue.enqueueAll(bestMove.toActionSeq())
-    actionQueue.dequeue
+    actionQueue.dequeue()

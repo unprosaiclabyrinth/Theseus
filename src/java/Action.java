@@ -16,14 +16,14 @@
  */
 
 class Action {
-//	public static int START_TRIAL = 0;
-	public static int GO_FORWARD = 1;
-	public static int TURN_RIGHT = 2;
-	public static int TURN_LEFT = 3;
-	public static int GRAB = 4;
-	public static int SHOOT = 5;
-	public static int NO_OP = 6;
-	public static int END_TRIAL = 7;
+//	public static final int START_TRIAL = 0;
+	public static final int GO_FORWARD = 1;
+	public static final int TURN_RIGHT = 2;
+	public static final int TURN_LEFT = 3;
+	public static final int GRAB = 4;
+	public static final int SHOOT = 5;
+	public static final int NO_OP = 6;
+	public static final int END_TRIAL = 7;
 	
 	public Action() {
 		// nothing to construct...

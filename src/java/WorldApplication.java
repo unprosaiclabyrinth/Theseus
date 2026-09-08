@@ -20,158 +20,131 @@
  * The University of Texas at Arlington.
  * 
  */
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.*;
+import java.nio.file.*;
 import java.util.Random;
 
 class WorldApplication {
-	private static final String VERSION = "v0.18h";
+    record Config(String agent, int trials, int steps, double probability, int seed,
+                  Path output, Path scores, boolean quiet, boolean mixed) {}
 
-	public static void main (String[] args) {
-		int worldSize = 4;
-		int numTrials = 1;
-		int maxSteps = 50;
-		
-		double forwardProbability = 1D;
-		boolean randomAgentLoc = false;
-		boolean userDefinedSeed = false;
-		
-		String outFilename = "wumpus_out.txt";
-		
-		Random rand = new Random();
-		int seed = rand.nextInt();
+    static Config parse(String[] args) {
+        String agent = "uba";
+        int trials = 1, steps = 50, seed = new Random().nextInt();
+        double probability = 1;
+        Path output = Path.of("wumpus_out.txt"), scores = null;
+        boolean quiet = false, mixed = false;
+        for (int i = 0; i < args.length; i++) {
+            String option = args[i];
+            if (option.equals("--quiet")) { quiet = true; continue; }
+            if (option.equals("--mixed")) { mixed = true; continue; }
+            if (!java.util.Set.of("--agent", "-d", "-a", "-t", "-s", "-r", "-n", "-f", "--scores").contains(option))
+                throw new IllegalArgumentException("Unknown option: " + option);
+            if (++i == args.length) throw new IllegalArgumentException("Missing value for " + option);
+            String value = args[i];
+            switch (option) {
+                case "--agent" -> agent = value;
+                case "-t" -> trials = Integer.parseInt(value);
+                case "-s" -> steps = Integer.parseInt(value);
+                case "-r" -> seed = Integer.parseInt(value);
+                case "-n" -> probability = Double.parseDouble(value);
+                case "-f" -> output = Path.of(value);
+                case "--scores" -> scores = Path.of(value);
+                case "-d" -> {
+                    if (Integer.parseInt(value) != 4) throw new IllegalArgumentException("Bundled agents require a 4x4 world.");
+                }
+                case "-a" -> {
+                    if (!value.equals("false")) throw new IllegalArgumentException("Bundled agents require the fixed start: use -a false.");
+                }
+            }
+        }
+        if (!java.util.Set.of("sra", "mra", "uba", "rla", "lba").contains(agent))
+            throw new IllegalArgumentException("Unknown agent: " + agent);
+        if (trials < 1 || steps < 1) throw new IllegalArgumentException("Trials and steps must be positive.");
+        if (!Double.isFinite(probability) || probability < 0 || probability > 1)
+            throw new IllegalArgumentException("-n must be a finite probability in [0,1].");
+        if ((agent.equals("mra") || agent.equals("uba")) && probability != 1)
+            throw new IllegalArgumentException("MRA and UBA require -n 1.");
+        if (mixed && !agent.equals("rla")) throw new IllegalArgumentException("--mixed requires --agent rla.");
+        if (agent.equals("rla") && !mixed && probability != 1 && probability != 0.8 && Math.abs(probability - 1.0/3) > 0.0001)
+            throw new IllegalArgumentException("RLA supports -n 1, 0.8, or 0.3333333333333333.");
+        if (scores == null) scores = output.resolveSibling(output.getFileName() + ".scores.csv");
+        if (output.toAbsolutePath().normalize().equals(scores.toAbsolutePath().normalize()))
+            throw new IllegalArgumentException("Trace and score files must be different.");
+        return new Config(agent, trials, steps, probability, seed, output, scores, quiet, mixed);
+    }
 
-		// iterate through command-line parameters
-		for (int i = 0; i < args.length; i++) {
-			String arg = args[i];
+    public static void main(String[] args) {
+        if (java.util.Arrays.asList(args).contains("--help")) {
+            System.out.println("Usage: --agent sra|mra|uba|rla|lba [-t trials] [-s steps] [-r seed] [-n probability]\n"
+                + "       [-f trace.txt] [--scores scores.csv] [--quiet] [--mixed]\n"
+                + "Defaults: uba, 1 trial, 50 steps, probability 1, 4x4 world, fixed start.\n"
+                + "--mixed evaluates RLA across 1, 0.8 and 1/3; --quiet omits step traces.\n"
+                + "Output files are overwritten. The score file defaults to <trace filename>.scores.csv.");
+            return;
+        }
+        int status = run(args);
+        if (status != 0) System.exit(status);
+    }
 
-			switch (arg) {
-				// if the world dimension is specified
-				case "-d" -> {
-					if (Integer.parseInt(args[i + 1]) > 1) {
-						worldSize = Integer.parseInt(args[i + 1]);
-					}
-					i++;
-				}
-				// if the maximum number of steps is specified
-				case "-s" -> {
-					maxSteps = Integer.parseInt(args[i + 1]);
-					i++;
-				}
-				// if the number of trials is specified
-				case "-t" -> {
-					numTrials = Integer.parseInt(args[i + 1]);
-					i++;
-				}
-				// if the random agent location value is specified
-				case "-a" -> {
-					randomAgentLoc = Boolean.parseBoolean(args[i + 1]);
-					i++;
-				}
-				// if the random number seed is specified
-				case "-r" -> {
-					seed = Integer.parseInt(args[i + 1]);
-					userDefinedSeed = true;
-					i++;
-				}
-				// if the output filename is specified
-				case "-f" -> {
-					outFilename = String.valueOf(args[i + 1]);
-					i++;
-				}
-				// if the non-determinism is specified
-				case "-n" -> {
-					forwardProbability = Double.parseDouble(args[i + 1]);
-					if (forwardProbability < 0D || forwardProbability > 1D)
-						throw new IllegalArgumentException("-n argument must be a probability [0,1]");
-					i++;
-				}
-			}
-		}
+    static int run(String[] args) {
+        try {
+            execute(parse(args));
+            return 0;
+        } catch (Exception e) {
+            System.err.println("Run failed: " + e.getMessage());
+            return 1;
+        }
+    }
 
-		try {
-			BufferedWriter outputWriter = new BufferedWriter(new FileWriter(outFilename));
-			BufferedWriter scoreWriter = new BufferedWriter(new FileWriter("wumpus_eval.txt"));
-
-			System.out.println("Wumpus-Lite " + VERSION + "\n");
-			outputWriter.write("Wumpus-Lite " + VERSION + "\n\n");
-			
-			System.out.println("Dimensions: " + worldSize + "x" + worldSize);
-			outputWriter.write("Dimensions: " + worldSize + "x" + worldSize + "\n");
-			
-			System.out.println("Maximum number of steps: " + maxSteps);
-			outputWriter.write("Maximum number of steps: " + maxSteps + "\n");
-			
-			System.out.println("Number of trials: " + numTrials);
-			outputWriter.write("Number of trials: " + numTrials + "\n");
-			
-			System.out.println("Random Agent Location: " + randomAgentLoc);
-			outputWriter.write("Random Agent Location: " + randomAgentLoc + "\n");
-	
-			System.out.println("Random number seed: " + seed);
-			outputWriter.write("Random number seed: " + seed + "\n");
-			 
-			System.out.println("Output filename: " + outFilename);
-			outputWriter.write("Output filename: " + outFilename + "\n");
-			
-			System.out.printf("Non-Deterministic Forward Probability: %.2f%n",forwardProbability);
-			outputWriter.write(String.format("Non-Deterministic Forward Probability: %.2f%n%n",forwardProbability));
-
-
-			char[][][] wumpusWorld = generateRandomWumpusWorld(seed, worldSize, randomAgentLoc);
-			Environment wumpusEnvironment = new Environment(worldSize, wumpusWorld, outputWriter);
-
-			int[] trialScores = new int[numTrials];
-			int totalScore = 0;
-
-			for (int currTrial = 0; currTrial < numTrials; currTrial++) {
-				Simulation trial = new Simulation(wumpusEnvironment, maxSteps, outputWriter, forwardProbability);
-				trialScores[currTrial] = trial.getScore();
-				scoreWriter.write(trialScores[currTrial] + "\n");
-
-				System.out.println("\n\n_________________Trial " + (currTrial + 1) + "_________________\n");
-				outputWriter.write("\n\n___________________________________________\n\n");
-
-				if (userDefinedSeed) {
-					wumpusWorld = generateRandomWumpusWorld(++seed, worldSize, randomAgentLoc);	
-				} else {
-					wumpusWorld = generateRandomWumpusWorld(rand.nextInt(), worldSize, randomAgentLoc);
-				}
-
-				wumpusEnvironment = new Environment(worldSize, wumpusWorld, outputWriter);
-
-				// Reset agents
-				SimpleReflexAgent.reset(); // reset SRA
-				ModelBasedReflexAgent.reset(); // reset MRA
-				UtilityBasedAgent.reset(); // reset UBA
-				ReactiveLearningAgent.reset(); // reset RLA
-				LLMBasedAgent.reset(); // reset LBA
-			 }
-			LLMBasedAgent.stop();
-			
-			for (int i = 0; i < numTrials; i++) {
-				System.out.println("Trial " + (i+1) + " score: " + trialScores[i]);
-				outputWriter.write("Trial " + (i+1) + " score: " + trialScores[i] + "\n");
-				totalScore += trialScores[i];
-			}
-			 
-			System.out.println("\nTotal Score: " + totalScore);
-			outputWriter.write("\nTotal Score: " + totalScore + "\n");
-			 
-			System.out.println("Average Score: " + ((double)totalScore/(double)numTrials));
-			outputWriter.write("Average Score: " + ((double)totalScore/(double)numTrials) + "\n");
-			 
-			outputWriter.close();
-			scoreWriter.close();
-	    }
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		System.out.println("\nFinished."); 
-	}
-	
+    static void execute(Config c) throws Exception {
+        if (Files.exists(c.output) && Files.exists(c.scores) && Files.isSameFile(c.output, c.scores))
+            throw new IllegalArgumentException("Trace and score files must be different.");
+        if (c.agent.equals("lba")) LLMBasedAgent.configure(c.probability);
+        AgentFunction function = new AgentFunction(c.agent);
+        PrintStream console = System.out;
+        try (BufferedWriter output = Files.newBufferedWriter(c.output);
+             BufferedWriter scores = Files.newBufferedWriter(c.scores);
+             BufferedWriter discard = new BufferedWriter(Writer.nullWriter());
+             PrintStream quietConsole = new PrintStream(OutputStream.nullOutputStream())) {
+            String metadata = "Theseus agent=" + c.agent + " seed=" + c.seed + " trials=" + c.trials
+                + " steps=" + c.steps + " probability=" + (c.mixed ? "mixed" : c.probability);
+            console.println(metadata);
+            output.write(metadata + "\n");
+            scores.write("trial,seed,agent,forward_probability,score\n");
+            long total = 0;
+            for (int trial = 0; trial < c.trials; trial++) {
+                int trialSeed = c.seed + trial;
+                double probability = c.mixed ? switch (trial % 3) { case 0 -> 1; case 1 -> 0.8; default -> 1.0/3; } : c.probability;
+                AgentRandom.seed(trialSeed);
+                function.reset();
+                int score;
+                try {
+                    if (c.quiet) System.setOut(quietConsole);
+                    BufferedWriter trace = c.quiet ? discard : output;
+                    if (!c.quiet) trace.write("Trial " + (trial + 1) + " seed=" + trialSeed + "\n");
+                    Environment world = new Environment(4, generateRandomWumpusWorld(trialSeed, 4, false), trace);
+                    score = new Simulation(world, c.steps, trace, probability, function,
+                        new Random(((long)trialSeed) ^ 0x5DEECE66DL)).getScore();
+                } finally {
+                    System.setOut(console);
+                    function.reset();
+                }
+                total += score;
+                scores.write((trial + 1) + "," + trialSeed + "," + c.agent + "," + probability + "," + score + "\n");
+                scores.flush(); // completed trials survive an error in a later trial
+                output.write("Trial " + (trial + 1) + " score: " + score + "\n");
+            }
+            String summary = "Total Score: " + total + "\nAverage Score: " + ((double)total / c.trials);
+            output.write(summary + "\n");
+            console.println(summary);
+        } finally {
+            System.setOut(console);
+            if (c.agent.equals("lba")) LLMBasedAgent.stop();
+        }
+    }
 	public static char[][][] generateRandomWumpusWorld(int seed, int size, boolean randomlyPlaceAgent) {
+        if (size < 2) throw new IllegalArgumentException("World size must be at least 2.");
 		char[][][] newWorld = new char[size][size][4];
 		boolean[][] occupied = new boolean[size][size];
 		

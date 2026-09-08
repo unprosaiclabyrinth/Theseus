@@ -9,7 +9,6 @@
  */
 import scala.collection.mutable
 import scala.language.postfixOps
-import scala.math.{abs, pow, sqrt}
 import scala.util.Random
 
 object ReactiveLearningAgent extends AgentFunctionImpl:
@@ -188,7 +187,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
         case Move.TurnLeft => (agentOrientation.turnLeft, hasArrow, belief)
         // move = Shoot only when hasArrow is true as dictated by possibleMoves
         case Move.Shoot => (agentOrientation, false,
-          belief.map((u, p) => (u match {
+          belief.toList.map((u, p) => (u match {
             case u: UnobservableWithWumpus =>
               val (xA, yA) = u.agent
               val (xW, yW) = u.wumpus
@@ -200,16 +199,16 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                 case _ => u
               }
             case u: UnobservableSansWumpus => assert(false, "Sans wumpus before shooting?!")
-          }, p))
+          }, p)).groupMapReduce(_._1)(_._2)(_ + _)
         )
         case _ => (agentOrientation, hasArrow, belief)
       }
 
       // Filter out states in which agent is dead
-      val alive = posterior.filter ((u, _) => u match {
+      val alive = posterior.filter ((u, p) => p > 0 && (u match {
         case u: UnobservableWithWumpus => !StateWithWumpus(ao, ha, u).isTerminal
         case u: UnobservableSansWumpus => !StateSansWumpus(ao, u).isTerminal
-      })
+      }))
 
       // normalize
       val t = alive.values.sum
@@ -222,7 +221,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       val totalProbability = sorted.values.sum
       require(totalProbability > 0, "Total probability must be positive.")
 
-      val r = BigDecimal(Random nextDouble) * totalProbability
+      val r = BigDecimal(Random.nextDouble()) * totalProbability
 
       u2State(
         sorted.toList.foldLeft((sorted.head._1, BigDecimal(0), false)) {
@@ -559,6 +558,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
     val (x, y) = sq
     x < 1 || x > 4 || y < 1 || y > 4
 
+  private var beliefInconsistent: Boolean = false
   private var forwardProbability: BigDecimal = 0
   private def slipProbability: BigDecimal = (1 - forwardProbability) / 2
 
@@ -578,17 +578,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
     private var state: LearningState = LearningState.Start
 
     def learned: BigDecimal =
-      // Return maximum likelihood result
-      val failureCount = learningExperience.count(!_)
-      if failureCount == 0 then 1
-      else if failureCount == 1 then 0.8
-      else
-        val n: Double = learningExperience.takeWhile(identity).length
-        val m: Double = learningExperience.reverse.tail.takeWhile(identity).length
-        val discriminant: Double = sqrt(pow(2*m + n + 2, 2) - 8*n)
-        val pMle: Double = (n - 2 + discriminant) / (2 * (n + m + 2))
-        if abs(pMle - 0.8) > abs(pMle - 1D/3D) then 1D/3D
-        else 0.8
+      LearningEstimator.estimate(learningExperience.toList)
 
     def notDone: Boolean = state != LearningState.Stop
 
@@ -665,6 +655,9 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
     agentPosPrior += 1 -> 1
     lastAction = Move.NoOp
     forwardProbability = 0
+    beliefInconsistent = false
+    actionQueue.clear()
+    globB = BeliefState(Orientation.East, false, Map.empty, Move.NoOp)
     Learning.reset()
     ModelBasedReflexAgent.reset()
 
@@ -721,118 +714,79 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       val death = b.chanceOfDeath
       val gold = b.chanceOfGold
       gold.map((ref, pGold) => ref -> (pGold - death(ref)))
-        .toList.sortBy(_._2).reverse.toMap
+
+    private def turns(from: Orientation, to: Orientation): List[Int] =
+      if from == to then Nil
+      else if from.turnLeft == to then List(Action.TURN_LEFT)
+      else if from.turnRight == to then List(Action.TURN_RIGHT)
+      else List(Action.TURN_LEFT, Action.TURN_LEFT)
 
     def process(o: Percept): Move =
-      val d = difference(globB)
-      d foreach ((ref, p) => println(f"$ref: $p%.5f"))
-      val move =
-        if d forall (_._2 < 0) then
-          if o.stench && globB.hasArrow then
-            val df = difference(globB.transition(Move.Shoot))
-            val dl = difference(globB.transition(Move.TurnLeft).transition(Move.Shoot))
-            val dr = difference(globB.transition(Move.TurnRight).transition(Move.Shoot))
-            if df exists (_._2 > 0) then
-              actionQueue enqueue Action.SHOOT
-              val goldenRef = df.head._1
-              if globB.agentOrientation == goldenRef then Move.GoForward
-              else if globB.agentOrientation.turnRight == goldenRef then
-                actionQueue enqueue Action.TURN_RIGHT
-                Move.GoForward
-              else if globB.agentOrientation.turnLeft == goldenRef then
-                actionQueue enqueue Action.TURN_LEFT
-                Move.GoForward
-              else
-                if Random nextBoolean then
-                  actionQueue enqueue (Action.TURN_RIGHT, Action.TURN_RIGHT)
-                else
-                  actionQueue enqueue (Action.TURN_LEFT, Action.TURN_LEFT)
-                Move.GoForward
-            else if dl exists (_._2 > 0) then
-              actionQueue enqueue (Action.TURN_LEFT, Action.SHOOT)
-              val goldenRef = df.head._1
-              if globB.agentOrientation == goldenRef then
-                actionQueue enqueue Action.TURN_RIGHT
-                Move.GoForward
-              else if globB.agentOrientation.turnRight == goldenRef then
-                if Random nextBoolean then
-                  actionQueue enqueue (Action.TURN_RIGHT, Action.TURN_RIGHT)
-                else
-                  actionQueue enqueue (Action.TURN_LEFT, Action.TURN_LEFT)
-                Move.GoForward
-              else if globB.agentOrientation.turnLeft == goldenRef then Move.GoForward
-              else
-                actionQueue enqueue Action.TURN_RIGHT
-                Move.GoForward
-            else if dr exists (_._2 > 0) then
-              actionQueue enqueue (Action.TURN_RIGHT, Action.SHOOT)
-              val goldenRef = df.head._1
-              if globB.agentOrientation == goldenRef then
-                actionQueue enqueue Action.TURN_LEFT
-                Move.GoForward
-              else if globB.agentOrientation.turnRight == goldenRef then Move.GoForward
-              else if globB.agentOrientation.turnLeft == goldenRef then
-                if Random nextBoolean then
-                  actionQueue enqueue (Action.TURN_RIGHT, Action.TURN_RIGHT)
-                else
-                  actionQueue enqueue (Action.TURN_LEFT, Action.TURN_LEFT)
-                Move.GoForward
-              else
-                actionQueue enqueue Action.TURN_LEFT
-                Move.GoForward
-            else Move.NoOp
-          else Move.NoOp
-        else
-          val goldenRef = d.head._1
-          if globB.agentOrientation == goldenRef then Move.GoForward
-          else if globB.agentOrientation.turnRight == goldenRef then
-            actionQueue enqueue Action.TURN_RIGHT
-            Move.GoForward
-          else if globB.agentOrientation.turnLeft == goldenRef then
-            actionQueue enqueue Action.TURN_LEFT
-            Move.GoForward
-          else
-            if Random nextBoolean then
-              actionQueue enqueue(Action.TURN_RIGHT, Action.TURN_RIGHT)
-            else
-              actionQueue enqueue(Action.TURN_LEFT, Action.TURN_LEFT)
-            Move.GoForward
-      move
+      val direct = difference(globB)
+      val (direction, value) = direct.maxBy(_._2)
+      if value >= 0 then
+        actionQueue.enqueueAll(turns(globB.agentOrientation, direction))
+        Move.GoForward
+      else if o.stench && globB.hasArrow then
+        val shots = List(
+          (List.empty[Int], globB.transition(Move.Shoot)),
+          (List(Action.TURN_LEFT), globB.transition(Move.TurnLeft).transition(Move.Shoot)),
+          (List(Action.TURN_RIGHT), globB.transition(Move.TurnRight).transition(Move.Shoot))
+        )
+        val (beforeShot, afterShot, best) = shots.map { (prefix, belief) =>
+          (prefix, belief, difference(belief).maxBy(_._2))
+        }.maxBy(_._3._2)
+        if best._2 > 0 then
+          actionQueue.enqueueAll(beforeShot :+ Action.SHOOT)
+          actionQueue.enqueueAll(turns(afterShot.agentOrientation, best._1))
+          Move.GoForward
+        else Move.NoOp
+      else Move.NoOp
 
   override def process(tp: TransferPercept): Int =
-    val percept = Percept(tp getBump, tp getBreeze, tp getStench, tp getGlitter, tp getScream)
-    if actionQueue isEmpty then
-      if percept.glitter then
-        actionQueue enqueue Action.GRAB
-      else if Learning notDone then
-        Learning.StateMachine.transition(percept)
+    val percept = Percept(tp.getBump, tp.getBreeze, tp.getStench, tp.getGlitter, tp.getScream)
+    if percept.glitter then
+      actionQueue.clear()
+      return Action.GRAB
+    // A scream can arrive between the queued turns in the learning routine.
+    if Learning.notDone && percept.scream then wumpus = (0, 0)
+
+    def safeFallback(): Int =
+      if percept.breeze || percept.stench then Action.NO_OP else Action.GO_FORWARD
+
+    if beliefInconsistent then return safeFallback()
+    if Learning.isDone && forwardProbability != 0 then
+      // Every real action has an observation, including queued turns and shots.
+      globB = globB.observe(percept)
+      if globB.isTerminal then
+        beliefInconsistent = true
+        actionQueue.clear()
+        println("The learned model no longer matches observations; switching to cautious reflex actions.")
+        return safeFallback()
+
+    if actionQueue.isEmpty then
+      if Learning.notDone then Learning.StateMachine.transition(percept)
       else if forwardProbability == 0 then
         forwardProbability = Learning.learned
         initializeGlobalBeliefState()
-        globB.observe(percept)
+        globB = globB.observe(percept)
+        if globB.isTerminal then
+          beliefInconsistent = true
+          return safeFallback()
         if forwardProbability == 1 then
           ModelBasedReflexAgent.reset()
           ModelBasedReflexAgent.rlaInit(hasArrow)
-          actionQueue enqueue ModelBasedReflexAgent.process(tp)
-        else if forwardProbability == 0.8 then
-          actionQueue enqueue SimpleReflexHelper.process(percept, true).action
-//          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-        else
-//          actionQueue enqueue SimpleReflexHelper.process(percept, true).action
-          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-      else
-        // adaptive update
-        if forwardProbability == 1 && percept.bump then forwardProbability = 0.8
-        globB = globB.observe(percept)
-        if forwardProbability == 1 then
-          actionQueue enqueue ModelBasedReflexAgent.process(tp)
-        else if forwardProbability == 0.8 then
-          actionQueue enqueue SimpleReflexHelper.process(percept).action
-//          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-        else
-//          actionQueue enqueue SimpleReflexHelper.process(percept).action
-          actionQueue enqueue StochasticModelBasedHelper.process(percept).action
-    val action = actionQueue.dequeue
+          actionQueue.enqueue(ModelBasedReflexAgent.process(tp))
+        else if forwardProbability == BigDecimal("0.8") then
+          actionQueue.enqueue(SimpleReflexHelper.process(percept, true).action)
+        else actionQueue.enqueue(StochasticModelBasedHelper.process(percept).action)
+      else if forwardProbability == 1 then
+        actionQueue.enqueue(ModelBasedReflexAgent.process(tp))
+      else if forwardProbability == BigDecimal("0.8") then
+        actionQueue.enqueue(SimpleReflexHelper.process(percept).action)
+      else actionQueue.enqueue(StochasticModelBasedHelper.process(percept).action)
+
+    val action = actionQueue.dequeue()
     val move =
       if action == Action.GO_FORWARD then Move.GoForward
       else if action == Action.TURN_LEFT then Move.TurnLeft
@@ -840,6 +794,6 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       else if action == Action.GRAB then Move.Grab
       else if action == Action.SHOOT then Move.Shoot
       else Move.NoOp
-    if Learning notDone then lastAction = move
-    else globB = globB.transition(move)
+    if Learning.notDone then lastAction = move
+    else if forwardProbability != 0 then globB = globB.transition(move)
     action

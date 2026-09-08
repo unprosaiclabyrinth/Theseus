@@ -32,6 +32,13 @@ class Simulation {
 	private final BufferedWriter outputWriter;
 	
 	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, double forwardProbability) {
+        this(wumpusEnvironment, maxSteps, outWriter, forwardProbability,
+             new AgentFunction(), new java.util.Random());
+    }
+
+    public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter,
+                      double forwardProbability, AgentFunction function, java.util.Random random) {
+        if (maxSteps < 1) throw new IllegalArgumentException("Maximum steps must be positive.");
 		// start the simulator
 		simulationRunning = true;
 		
@@ -39,7 +46,7 @@ class Simulation {
 		transferPercept = new TransferPercept(wumpusEnvironment);
 		environment = wumpusEnvironment;
 		
-		agent = new Agent(environment, transferPercept, forwardProbability);
+		agent = new Agent(environment, transferPercept, forwardProbability, function, random);
 		
 		environment.placeAgent(agent);
 		environment.printEnvironment();
@@ -93,7 +100,7 @@ class Simulation {
 			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 
 		printEndWorld();
@@ -110,7 +117,7 @@ class Simulation {
 			outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	
@@ -160,7 +167,7 @@ class Simulation {
 			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	
@@ -236,10 +243,15 @@ class Simulation {
 				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.NO_OP;
-			}
+            } else if (action == Action.END_TRIAL) {
+                simulationRunning = false;
+                lastAction = Action.END_TRIAL;
+            } else {
+                throw new IllegalArgumentException("Invalid action: " + action);
+            }
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	
