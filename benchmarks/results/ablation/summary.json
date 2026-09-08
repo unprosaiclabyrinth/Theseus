@@ -1,0 +1,100 @@
+{
+  "commit": "1d29b3fb2540c5a15ae3567ba9781bedbc113add",
+  "dirty": true,
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "java": "openjdk 22.0.1 2024-04-16\nOpenJDK Runtime Environment (build 22.0.1+8-16)\nOpenJDK 64-Bit Server VM (build 22.0.1+8-16, mixed mode, sharing)\n",
+  "seed": 42,
+  "steps": 50,
+  "horizon": 15,
+  "confidence_note": "Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.",
+  "experiments": {
+    "A-n1000-d0.2-h15-snone": {
+      "trials": 30,
+      "mean_score": 60.5,
+      "score_sd": 255.4402217673476,
+      "mean_score_normal_95_ci": [
+        -30.908109416650973,
+        151.90810941665097
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.06666666666666667,
+      "mean_primitive_actions": 46.733333333333334,
+      "arrows_fired": 7,
+      "wumpus_kills": 4,
+      "planning_seconds": 187.911924713,
+      "elapsed_seconds": 188.1292995000258,
+      "tree_policy": "canonical",
+      "rollout": "uniform",
+      "shaping": "none",
+      "simulations": 1000,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "B-n1000-d0.2-h15-snone": {
+      "trials": 30,
+      "mean_score": 124.26666666666667,
+      "score_sd": 347.7459371173288,
+      "mean_score_normal_95_ci": [
+        -0.1726187727568771,
+        248.7059521060902
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.13333333333333333,
+      "mean_primitive_actions": 43.833333333333336,
+      "arrows_fired": 8,
+      "wumpus_kills": 6,
+      "planning_seconds": 200.469823731,
+      "elapsed_seconds": 200.73059866699623,
+      "tree_policy": "canonical",
+      "rollout": "informed",
+      "shaping": "none",
+      "simulations": 1000,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "C-n1000-d0.2-h15-spotential": {
+      "trials": 30,
+      "mean_score": 215.23333333333332,
+      "score_sd": 435.74032787123724,
+      "mean_score_normal_95_ci": [
+        59.30565956401452,
+        371.1610071026521
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.23333333333333334,
+      "mean_primitive_actions": 42.733333333333334,
+      "arrows_fired": 7,
+      "wumpus_kills": 5,
+      "planning_seconds": 127.090542966,
+      "elapsed_seconds": 127.32773495797301,
+      "tree_policy": "canonical",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 1000,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n1000-d0.2-h15-spotential": {
+      "trials": 30,
+      "mean_score": 572.7,
+      "score_sd": 511.8641488681853,
+      "mean_score_normal_95_ci": [
+        389.53176673398553,
+        755.8682332660146
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.6,
+      "mean_primitive_actions": 30.466666666666665,
+      "arrows_fired": 9,
+      "wumpus_kills": 2,
+      "planning_seconds": 149.222237702,
+      "elapsed_seconds": 149.48721645894693,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 1000,
+      "discount": 0.2,
+      "horizon": 15
+    }
+  }
+}
