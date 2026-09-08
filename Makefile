@@ -22,7 +22,7 @@ lint:
 	./scripts/format.sh --check
 	python3 -m py_compile scripts/benchmark.py scripts/summarize_benchmarks.py
 	@for script in scripts/*.sh; do sh -n "$$script" || exit; done
-	git diff --check
+	@if [ -e .git ]; then git diff --check; fi
 
 run uba:
 	./scripts/run.sh --agent uba

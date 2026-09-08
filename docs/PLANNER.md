@@ -97,10 +97,18 @@ python3 scripts/benchmark.py --case C --sweep shaping --trials 100 --output /tmp
 python3 scripts/benchmark.py --case D --sweep horizon --trials 100 --output /tmp/theseus-horizons
 ```
 
-The output directory must be new, preventing accidental replacement of experiments. `--skip-build` uses an existing build. Classes are copied into a temporary snapshot so later builds cannot alter a running experiment. The script uses argument arrays, never shell interpolation.
+The output directory must be new, preventing accidental replacement of experiments. `--skip-build` uses an existing build and should only be used after building the intended source. The revision describes the working tree at launch; the class hash identifies the actual compiled snapshot. Classes are copied into a temporary snapshot so later builds cannot alter a running experiment. The script uses argument arrays, never shell interpolation.
 
 Cases: A = canonical/uniform/no shaping; B = canonical/informed/no shaping; C = canonical/informed/potential; D = heuristic/informed/potential. Discount sweep: .2, .5, .8, .9, .95, .99. Budget sweep: 100, 250, 500, 1000, 2500, 5000. Horizon sweep: 5, 10, 15, 30.
 
 CSV records seed, score, primitive actions (including no-op), arrows fired, Wumpus kills, death, gold retrieval and nanoseconds spent choosing actions. `END_TRIAL` is not a primitive action. Choosing includes the adapter and queued actions, not just tree search. Timing is nondeterministic and includes JVM warmup; avoid concurrent workloads for performance measurements. JSON records configuration, source revision, dirty status, host/runtime, standard deviation and an approximate 95% normal confidence interval for the mean. Small samples are exploratory. Compare paired seeds, inspect uncertainty, and confirm any proposed setting on held-out seeds.
 
 `make test` includes deterministic model/simulator parity, tree-statistic tests, posterior sampling tests, and two identical runs over ten seeded worlds. These are correctness checks, not claims that every seeded world is solvable or that one policy dominates.
+
+To render measured results and a paired comparison:
+
+```sh
+python3 scripts/summarize_benchmarks.py /tmp/theseus-ablation --reference /path/to/reference.scores.csv
+```
+
+Pairing uses shared seeds, rejects duplicates, and reports the number actually paired. The caller must also ensure identical world generation and primitive-step limits. New harness runs record a hash of the snapshotted class files in addition to the source revision.
