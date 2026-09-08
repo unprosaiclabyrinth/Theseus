@@ -5,6 +5,8 @@ import csv
 import json
 import math
 import platform
+import shutil
+import tempfile
 import statistics
 import subprocess
 import time
@@ -38,7 +40,7 @@ def main():
     parser.add_argument('--simulations', type=int, default=1000)
     parser.add_argument('--horizon', type=int, default=15)
     parser.add_argument('--discount', type=float, default=.2)
-    parser.add_argument('--sweep', choices=['none', 'discount', 'simulations'], default='none')
+    parser.add_argument('--sweep', choices=['none', 'discount', 'simulations', 'horizon', 'shaping'], default='none')
     parser.add_argument('--case', choices=['all', 'A', 'B', 'C', 'D'], default='all')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--skip-build', action='store_true')
@@ -48,7 +50,18 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     if not args.skip_build:
         subprocess.run(['make', 'build'], cwd=ROOT, check=True)
-    classpath = (ROOT/'target/runtime.classpath').read_text().strip()
+    # Snapshot classes: a concurrent later build must not change this experiment.
+    snapshot = tempfile.TemporaryDirectory(prefix='theseus-benchmark-')
+    parts = (ROOT/'target/runtime.classpath').read_text().strip().split(':')
+    copied = []
+    for index, part in enumerate(parts):
+        if Path(part).is_dir():
+            destination = Path(snapshot.name)/str(index)
+            shutil.copytree(part,destination)
+            copied.append(str(destination))
+        else:
+            copied.append(part)
+    classpath = ':'.join(copied)
     cases = {'A': ('canonical','uniform','none'),
              'B': ('canonical','informed','none'),
              'C': ('canonical','informed','potential'),
@@ -58,22 +71,27 @@ def main():
         variants = [(args.simulations,d) for d in [.2,.5,.8,.9,.95,.99]]
     elif args.sweep == 'simulations':
         variants = [(n,args.discount) for n in [100,250,500,1000,2500,5000]]
+    horizons = [5,10,15,30] if args.sweep == 'horizon' else [args.horizon]
+    shapings = ['none','legacy','potential'] if args.sweep == 'shaping' else [None]
     report = dict(commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                   dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
                   platform=platform.platform(), java=subprocess.run(['java','--version'],capture_output=True,text=True,check=True).stdout,
                   seed=args.seed, steps=args.steps, horizon=args.horizon,
                   confidence_note='Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.',
                   experiments={})
-    for simulations, discount in variants:
+    for horizon in horizons:
+      for shaping_override in shapings:
+       for simulations, discount in variants:
         for name, (tree, rollout, shaping) in cases.items():
             if args.case != 'all' and name != args.case:
                 continue
-            label = f'{name}-n{simulations}-d{discount}'
+            shaping = shaping_override or shaping
+            label = f'{name}-n{simulations}-d{discount}-h{horizon}-s{shaping}'
             trace = (args.output/f'{label}.txt').resolve()
             command = ['java','-Xmx2g','-cp',classpath,'WorldApplication','--agent','uba',
                        '-t',str(args.trials),'-r',str(args.seed),'-s',str(args.steps),'--quiet',
                        '-f',str(trace),'--simulations',str(simulations),'--discount',str(discount),
-                       '--horizon',str(args.horizon),'--tree-policy',tree,'--rollout',rollout,'--shaping',shaping]
+                       '--horizon',str(horizon),'--tree-policy',tree,'--rollout',rollout,'--shaping',shaping]
             start = time.perf_counter()
             result = subprocess.run(command,cwd=ROOT,capture_output=True,text=True)
             (args.output/f'{label}.log').write_text(result.stdout+result.stderr)
@@ -84,7 +102,7 @@ def main():
                 raise RuntimeError(f'{label}: incomplete trial output')
             report['experiments'][label] = dict(summary(rows), elapsed_seconds=time.perf_counter()-start,
                                                tree_policy=tree,rollout=rollout,shaping=shaping,
-                                               simulations=simulations,discount=discount)
+                                               simulations=simulations,discount=discount,horizon=horizon)
             (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n')
             print(label, report['experiments'][label],flush=True)
 

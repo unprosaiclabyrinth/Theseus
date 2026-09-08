@@ -78,11 +78,11 @@ object UbaModel:
   // They inherit from State.
   case class StateWithWumpus(agentPosition: Position, agentOrientation: Orientation, hasArrow: Boolean,
                                      u: UnobservableWithWumpus) extends State:
-    override def isTerminal: Boolean = Set(u.wumpus, u.pit1, u.pit2) contains agentPosition
+    override def isTerminal: Boolean = agentPosition == u.wumpus || agentPosition == u.pit1 || agentPosition == u.pit2
 
   case class StateSansWumpus(agentPosition: Position, agentOrientation: Orientation,
                                      u: UnobservableSansWumpus) extends State:
-    override def isTerminal: Boolean = Set(u.pit1, u.pit2) contains agentPosition
+    override def isTerminal: Boolean = agentPosition == u.pit1 || agentPosition == u.pit2
 
   /**
    * Encapsulate the *unobservable* variables of the state in a single model.
@@ -444,7 +444,7 @@ object UbaModel:
      * Retrieve the last update from the history.
      * @return the last update as an option; None if history is empty.
      */
-    def lastOption: Option[Move | Percept4] =
+    lazy val lastOption: Option[Move | Percept4] =
       if obsHist.length - moveHist.length == 1 then Some(obsHist.last)
       else moveHist.lastOption
 
