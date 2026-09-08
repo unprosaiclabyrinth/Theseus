@@ -26,7 +26,7 @@ import java.util.Random;
 
 class WorldApplication {
     record Config(String agent, int trials, int steps, double probability, int seed,
-                  Path output, Path scores, boolean quiet, boolean mixed) {}
+                  Path output, Path scores, boolean quiet, boolean mixed, PlannerConfig planner) {}
 
     static Config parse(String[] args) {
         String agent = "uba";
@@ -34,14 +34,16 @@ class WorldApplication {
         double probability = 1;
         Path output = Path.of("wumpus_out.txt"), scores = null;
         boolean quiet = false, mixed = false;
+        var plannerOptions = new java.util.HashMap<String, String>();
         for (int i = 0; i < args.length; i++) {
             String option = args[i];
             if (option.equals("--quiet")) { quiet = true; continue; }
             if (option.equals("--mixed")) { mixed = true; continue; }
-            if (!java.util.Set.of("--agent", "-d", "-a", "-t", "-s", "-r", "-n", "-f", "--scores").contains(option))
+            if (!PlannerOptions.accepts(option) && !java.util.Set.of("--agent", "-d", "-a", "-t", "-s", "-r", "-n", "-f", "--scores").contains(option))
                 throw new IllegalArgumentException("Unknown option: " + option);
             if (++i == args.length) throw new IllegalArgumentException("Missing value for " + option);
             String value = args[i];
+            if (PlannerOptions.accepts(option)) { plannerOptions.put(option, value); continue; }
             switch (option) {
                 case "--agent" -> agent = value;
                 case "-t" -> trials = Integer.parseInt(value);
@@ -68,16 +70,21 @@ class WorldApplication {
         if (mixed && !agent.equals("rla")) throw new IllegalArgumentException("--mixed requires --agent rla.");
         if (agent.equals("rla") && !mixed && probability != 1 && probability != 0.8 && Math.abs(probability - 1.0/3) > 0.0001)
             throw new IllegalArgumentException("RLA supports -n 1, 0.8, or 0.3333333333333333.");
+        if (!plannerOptions.isEmpty() && !agent.equals("uba"))
+            throw new IllegalArgumentException("Planner options require --agent uba.");
+        PlannerConfig planner = PlannerOptions.parse(plannerOptions);
         if (scores == null) scores = output.resolveSibling(output.getFileName() + ".scores.csv");
         if (output.toAbsolutePath().normalize().equals(scores.toAbsolutePath().normalize()))
             throw new IllegalArgumentException("Trace and score files must be different.");
-        return new Config(agent, trials, steps, probability, seed, output, scores, quiet, mixed);
+        return new Config(agent, trials, steps, probability, seed, output, scores, quiet, mixed, planner);
     }
 
     public static void main(String[] args) {
         if (java.util.Arrays.asList(args).contains("--help")) {
             System.out.println("Usage: --agent sra|mra|uba|rla|lba [-t trials] [-s steps] [-r seed] [-n probability]\n"
                 + "       [-f trace.txt] [--scores scores.csv] [--quiet] [--mixed]\n"
+                + "UBA: [--simulations N] [--horizon N] [--discount 0..1] [--exploration C]\n"
+                + "     [--tree-policy canonical|heuristic] [--rollout uniform|informed] [--shaping none|legacy|potential]\n"
                 + "Defaults: uba, 1 trial, 50 steps, probability 1, 4x4 world, fixed start.\n"
                 + "--mixed evaluates RLA across 1, 0.8 and 1/3; --quiet omits step traces.\n"
                 + "Output files are overwritten. The score file defaults to <trace filename>.scores.csv.");
@@ -101,6 +108,7 @@ class WorldApplication {
         if (Files.exists(c.output) && Files.exists(c.scores) && Files.isSameFile(c.output, c.scores))
             throw new IllegalArgumentException("Trace and score files must be different.");
         if (c.agent.equals("lba")) LLMBasedAgent.configure(c.probability);
+        if (c.agent.equals("uba")) UtilityBasedAgent.configure(c.planner);
         AgentFunction function = new AgentFunction(c.agent);
         PrintStream console = System.out;
         try (BufferedWriter output = Files.newBufferedWriter(c.output);
@@ -108,7 +116,8 @@ class WorldApplication {
              BufferedWriter discard = new BufferedWriter(Writer.nullWriter());
              PrintStream quietConsole = new PrintStream(OutputStream.nullOutputStream())) {
             String metadata = "Theseus agent=" + c.agent + " seed=" + c.seed + " trials=" + c.trials
-                + " steps=" + c.steps + " probability=" + (c.mixed ? "mixed" : c.probability);
+                + " steps=" + c.steps + " probability=" + (c.mixed ? "mixed" : c.probability)
+                + (c.agent.equals("uba") ? " planner=" + c.planner : "");
             console.println(metadata);
             output.write(metadata + "\n");
             scores.write("trial,seed,agent,forward_probability,score\n");

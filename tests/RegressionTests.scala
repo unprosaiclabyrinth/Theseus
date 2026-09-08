@@ -108,9 +108,9 @@ object RegressionTests:
       assert(LearningEstimator.estimate(List.fill(14)(true) :+ false) == BigDecimal("0.8"))
     }
     check("UBA successful grab is terminal and can only pay once") {
-      val u = make("UtilityBasedAgent$UnobservableWithWumpus", (1,1), (4,4), (3,3), (3,4))
-      val state = make("UtilityBasedAgent$StateWithWumpus", (1,1), member("UtilityBasedAgent$Orientation$", "East"), java.lang.Boolean.TRUE, u)
-      val grab = member("UtilityBasedAgent$Move$", "Grab")
+      val u = make("UbaModel$UnobservableWithWumpus", (1,1), (4,4), (3,3), (3,4))
+      val state = make("UbaModel$StateWithWumpus", (1,1), member("UbaModel$Orientation$", "East"), java.lang.Boolean.TRUE, u)
+      val grab = member("UbaModel$Move$", "Grab")
       assert(call(state, "reward", grab) == Integer.valueOf(1000))
       val next = call(state, "transition", grab)
       assert(call(next, "isTerminal") == java.lang.Boolean.TRUE)
