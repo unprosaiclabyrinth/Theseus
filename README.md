@@ -19,7 +19,7 @@ The agent aims to maximize the **average** score over a large number of trials. 
 
 2. **Model-based reflex agent (MRA):** Maintains a world model that represents the agent's state of knowledge about the world, which is used in conjunction with the observation at every time step to compute the action according to condition-action rules. The world model is updated according to the action that is executed and the observation.
 
-3. **Utility-based agent (UBA):** *Plans* ahead in time at every time step and computes the action according to the insight gained from the forward search. It executes the action, observes the percepts, and plans from the new state for the next action.
+3. **Utility-based agent (UBA):** Uses POMCP-style Monte Carlo tree search with root sampling from exact finite belief support, deterministic simulation, macro-actions, configurable rollout policies, and optional reward/tree-policy biases. See [planner design and experiments](docs/PLANNER.md).
 
 4. **Reactive Learning Agent (RLA):**  Operates in an **unknown** environment, in which the forward probability (the probability with which the agent goes forward on a `GO_FORWARD` action as opposed to slipping to the left or the right) is unknown. A forward probability of 1 means that the environment is completely deterministic. The forward probability is one of three values: 1, 0.8, or $$\frac{1}{3}$$, but the RLA doesn't know which *a priori*. The RLA spends some time collecting data through experience, from which it learns the forward probability using maximum likelihood estimation (MLE). This is the exploration phase. Once the forward probability is learnt, the RLA switches to the exploitation phase, where it uses the learnt forward probability along with the known transition model to navigate the environment and maximize its score.
 
@@ -37,6 +37,7 @@ cd Theseus
 make check
 make build
 make test
+make lint
 make mra
 ```
 
@@ -68,6 +69,10 @@ Options:
 | `--scores` | Score CSV filename; default `<trace filename>.scores.csv` |
 | `--quiet` | Omit step traces and agent chatter; retain summary and scores |
 | `--mixed` | Cycle RLA trials through probabilities 1, 0.8, and 1/3 |
+
+UBA also accepts `--simulations`, `--horizon`, `--discount`, `--exploration`,
+`--tree-policy`, `--rollout`, and `--shaping`. Defaults and semantics are in the
+[planner guide](docs/PLANNER.md).
 
 Bundled agents assume a 4x4 world and a fixed start at (1,1), facing east.
 Unsupported dimensions or random starting locations are rejected. MRA and UBA
@@ -123,12 +128,17 @@ make la-tenk    # 10,000 RLA trials split across the three environments
 ```
 
 The mixed run records every trial in one CSV, including seed, agent, movement
-probability, and score. It produces one weighted overall mean and does not
+probability, score, outcome counts and decision timing. It produces one weighted overall mean and does not
 replace earlier probability groups' scores. For comparable experiments, use
 explicit seeds, identical world settings and step limits, and record the source
 revision. The seed controls world generation, stochastic movement, and agent
 sampling. Reproducibility assumes the same compiler/runtime and algorithm;
 remote LLM responses are not deterministic.
+
+For repeatable policy comparisons and parameter sweeps, use
+`scripts/benchmark.py`; see the [experiment guide](docs/PLANNER.md#experiments).
+`make format` applies pinned Scalafmt; `make lint` checks formatting, shell syntax,
+Python syntax and whitespace. CI runs lint and tests on JDK 21, macOS and Linux.
 
 The UBA's search is expensive: use small trial counts first. Its simulator now
 terminates at successful grabs and deaths, and real actions are selected by

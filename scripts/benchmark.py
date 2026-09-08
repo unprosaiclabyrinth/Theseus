@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import itertools
+import hashlib
 import math
 import platform
 import shutil
@@ -64,6 +65,10 @@ def main():
         else:
             copied.append(part)
     classpath = ':'.join(copied)
+    build_hash = hashlib.sha256()
+    for file in sorted(Path(snapshot.name).rglob('*.class')):
+        build_hash.update(str(file.relative_to(snapshot.name)).encode())
+        build_hash.update(file.read_bytes())
     cases = {'A': ('canonical','uniform','none'),
              'B': ('canonical','informed','none'),
              'C': ('canonical','informed','potential'),
@@ -77,6 +82,7 @@ def main():
     shapings = ['none','legacy','potential'] if args.sweep == 'shaping' else [None]
     report = dict(commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                   dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
+                  build_classes_sha256=build_hash.hexdigest(),
                   platform=platform.platform(), java=subprocess.run(['java','--version'],capture_output=True,text=True,check=True).stdout,
                   seed=args.seed, steps=args.steps, horizon=args.horizon,
                   confidence_note='Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.',
