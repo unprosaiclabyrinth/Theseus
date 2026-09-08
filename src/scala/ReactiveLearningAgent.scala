@@ -14,20 +14,37 @@ import scala.util.Random
 object ReactiveLearningAgent extends AgentFunctionImpl:
   private val actionQueue: mutable.Queue[Int] = mutable.Queue.empty
 
-  private case class Percept(bump: Boolean, breeze: Boolean, stench: Boolean, glitter: Boolean, scream: Boolean):
-    def isNone: Boolean = !bump && ! breeze && !stench && !glitter && !scream
+  private case class Percept(
+      bump: Boolean,
+      breeze: Boolean,
+      stench: Boolean,
+      glitter: Boolean,
+      scream: Boolean
+  ):
+    def isNone: Boolean = !bump && !breeze && !stench && !glitter && !scream
 
   private sealed trait Unobservable
 
   // Unobservables with the wumpus position and without it are modeled and handled separately.
-  private case class UnobservableWithWumpus(agent: Position, gold: Position, wumpus: Position,
-                                            pit1: Position, pit2: Position, shouldBump: Boolean) extends Unobservable:
+  private case class UnobservableWithWumpus(
+      agent: Position,
+      gold: Position,
+      wumpus: Position,
+      pit1: Position,
+      pit2: Position,
+      shouldBump: Boolean
+  ) extends Unobservable:
     def toSans: UnobservableSansWumpus = UnobservableSansWumpus(agent, gold, pit1, pit2, shouldBump)
 
     def pits: Set[Position] = Set(pit1, pit2)
 
-  private case class UnobservableSansWumpus(agent: Position, gold: Position,
-                                            pit1: Position, pit2: Position, shouldBump: Boolean) extends Unobservable:
+  private case class UnobservableSansWumpus(
+      agent: Position,
+      gold: Position,
+      pit1: Position,
+      pit2: Position,
+      shouldBump: Boolean
+  ) extends Unobservable:
     def pits: Set[Position] = Set(pit1, pit2)
 
   private sealed trait State:
@@ -39,21 +56,22 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
         case s: StateSansWumpus => BeliefState(s.agentOrientation, false, Map(s.u -> 1), Move.NoOp)
       }).transition(m)
 
-
     def reward(m: Move): Int =
       val successor = transition(m)
       {
         if successor.isTerminal then -1000
-        else m match {
-          case Move.GoForward | Move.TurnLeft | Move.TurnRight => -1
-          case Move.Shoot => -10
-          case Move.NoOp => 0
-          case Move.Grab => this match {
-            case s: StateWithWumpus if s.u.agent == s.u.gold => 1000
-            case s: StateSansWumpus if s.u.agent == s.u.gold => 1000
-            case _ => -1
+        else
+          m match {
+            case Move.GoForward | Move.TurnLeft | Move.TurnRight => -1
+            case Move.Shoot                                      => -10
+            case Move.NoOp                                       => 0
+            case Move.Grab                                       =>
+              this match {
+                case s: StateWithWumpus if s.u.agent == s.u.gold => 1000
+                case s: StateSansWumpus if s.u.agent == s.u.gold => 1000
+                case _                                           => -1
+              }
           }
-        }
       }
 
     def heuristic(m: Move): Int =
@@ -80,18 +98,22 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
 
   // States with wumpus alive and those with wumpus dead are modeled and handled separately
   // They inherit from State.
-  private case class StateWithWumpus(agentOrientation: Orientation, hasArrow: Boolean,
-                                     u: UnobservableWithWumpus) extends State:
+  private case class StateWithWumpus(
+      agentOrientation: Orientation,
+      hasArrow: Boolean,
+      u: UnobservableWithWumpus
+  ) extends State:
     override def isTerminal: Boolean = Set(u.wumpus, u.pit1, u.pit2) contains u.agent
 
-  private case class StateSansWumpus(agentOrientation: Orientation,
-                                     u: UnobservableSansWumpus) extends State:
+  private case class StateSansWumpus(agentOrientation: Orientation, u: UnobservableSansWumpus) extends State:
     override def isTerminal: Boolean = Set(u.pit1, u.pit2) contains u.agent
 
-  private case class BeliefState(agentOrientation: Orientation,
-                                 hasArrow: Boolean,
-                                 belief: Map[Unobservable, BigDecimal],
-                                 prevAction: Move):
+  private case class BeliefState(
+      agentOrientation: Orientation,
+      hasArrow: Boolean,
+      belief: Map[Unobservable, BigDecimal],
+      prevAction: Move
+  ):
     def u2State(u: Unobservable): State =
       require(belief contains u, "u2State: I don't believe this!")
       u match {
@@ -103,23 +125,28 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       if isTerminal then return Set.empty
       Move.values.toSet filter {
         case Move.Shoot => hasArrow
-        case _ => true
+        case _          => true
       }
 
     def isTerminal: Boolean = belief.isEmpty
 
-    private def weightedParticleFilter(prior: Map[Unobservable, BigDecimal], obs: Boolean,
-                               condition: Unobservable => Boolean): Map[Unobservable, BigDecimal] =
+    private def weightedParticleFilter(
+        prior: Map[Unobservable, BigDecimal],
+        obs: Boolean,
+        condition: Unobservable => Boolean
+    ): Map[Unobservable, BigDecimal] =
       // if obs then condition should be true else should be false
       val posterior = prior.filter((u, _) => condition(u) == obs)
 
       // normalize
       val t = posterior.values.sum
       val sz = posterior.size
-      posterior.map((u, p) => u match {
-        case u: UnobservableWithWumpus => u -> p/(if t == 0 then sz else t)
-        case u: UnobservableSansWumpus => u -> p/(if t == 0 then sz else t)
-      })
+      posterior.map((u, p) =>
+        u match {
+          case u: UnobservableWithWumpus => u -> p / (if t == 0 then sz else t)
+          case u: UnobservableSansWumpus => u -> p / (if t == 0 then sz else t)
+        }
+      )
 
     def observe(percept: Percept): BeliefState =
       val posterior =
@@ -128,92 +155,127 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
             weightedParticleFilter( // breeze update
               weightedParticleFilter( // stench update
                 weightedParticleFilter( // scream update
-                  belief, percept.scream, u => prevAction match {
-                    case Move.Shoot => u.isInstanceOf[UnobservableSansWumpus]
-                    case _ => percept.scream // no filtering, essentially identity function, keep belief as is
-                  }
-                ), percept.stench, {
+                  belief,
+                  percept.scream,
+                  u =>
+                    prevAction match {
+                      case Move.Shoot => u.isInstanceOf[UnobservableSansWumpus]
+                      case _          =>
+                        percept.scream // no filtering, essentially identity function, keep belief as is
+                    }
+                ),
+                percept.stench,
+                {
                   case uWithWumpus: UnobservableWithWumpus =>
                     neighborsOf(uWithWumpus.agent) contains uWithWumpus.wumpus
                   case _ => false
                 }
-              ), percept.breeze, {
+              ),
+              percept.breeze,
+              {
                 case u: UnobservableWithWumpus =>
                   u.pits.exists(neighborsOf(u.agent).contains)
                 case u: UnobservableSansWumpus =>
                   u.pits.exists(neighborsOf(u.agent).contains)
               }
-            ), percept.glitter, {
+            ),
+            percept.glitter,
+            {
               case u: UnobservableWithWumpus => u.agent == u.gold
               case u: UnobservableSansWumpus => u.agent == u.gold
             }
-          ), percept.bump, {
+          ),
+          percept.bump,
+          {
             case u: UnobservableWithWumpus =>
-               u.shouldBump && !(Set((2, 2), (2, 3), (3, 2), (3, 3)) contains u.agent)
+              u.shouldBump && !(Set((2, 2), (2, 3), (3, 2), (3, 3)) contains u.agent)
             case u: UnobservableSansWumpus =>
-               u.shouldBump && !(Set((2, 2), (2, 3), (3, 2), (3, 3)) contains u.agent)
+              u.shouldBump && !(Set((2, 2), (2, 3), (3, 2), (3, 3)) contains u.agent)
           }
         )
 
       // normalize the posterior
-      copy(belief = posterior.map((u, p) => (u match {
-        case u: UnobservableWithWumpus => u.copy(shouldBump = false)
-        case u: UnobservableSansWumpus => u.copy(shouldBump = false)
-      }) -> p))
+      copy(belief =
+        posterior.map((u, p) =>
+          (u match {
+            case u: UnobservableWithWumpus => u.copy(shouldBump = false)
+            case u: UnobservableSansWumpus => u.copy(shouldBump = false)
+          }) -> p
+        )
+      )
 
     def transition(move: Move): BeliefState =
       val (ao, ha, posterior) = move match {
-        case Move.GoForward => (agentOrientation, hasArrow,
-          belief.toList.flatMap((u, p) => u match {
-            case u: UnobservableWithWumpus =>
-              val f: Position = agentOrientation.forwardFrom(u.agent)
-              val uf = u.copy(agent = if hitsWall(f) then u.agent else f, shouldBump = hitsWall(f))
-              val l: Position = agentOrientation.leftFrom(u.agent)
-              val ul = u.copy(agent = if hitsWall(l) then u.agent else l, shouldBump = hitsWall(l))
-              val r: Position = agentOrientation.rightFrom(u.agent)
-              val ur = u.copy(agent = if hitsWall(r) then u.agent else r, shouldBump = hitsWall(r))
-              List((uf, p * forwardProbability), (ul, p * slipProbability), (ur, p * slipProbability))
-            case u: UnobservableSansWumpus =>
-              val f: Position = agentOrientation.forwardFrom(u.agent)
-              val uf = u.copy(agent = if hitsWall(f) then u.agent else f, shouldBump = hitsWall(f))
-              val l: Position = agentOrientation.leftFrom(u.agent)
-              val ul = u.copy(agent = if hitsWall(l) then u.agent else l, shouldBump = hitsWall(l))
-              val r: Position = agentOrientation.rightFrom(u.agent)
-              val ur = u.copy(agent = if hitsWall(r) then u.agent else r, shouldBump = hitsWall(r))
-              List((uf, p * forwardProbability), (ul, p * slipProbability), (ur, p * slipProbability))
-          }).groupMapReduce(_._1)(_._2)(_ + _)
-        )
+        case Move.GoForward =>
+          (
+            agentOrientation,
+            hasArrow,
+            belief.toList
+              .flatMap((u, p) =>
+                u match {
+                  case u: UnobservableWithWumpus =>
+                    val f: Position = agentOrientation.forwardFrom(u.agent)
+                    val uf = u.copy(agent = if hitsWall(f) then u.agent else f, shouldBump = hitsWall(f))
+                    val l: Position = agentOrientation.leftFrom(u.agent)
+                    val ul = u.copy(agent = if hitsWall(l) then u.agent else l, shouldBump = hitsWall(l))
+                    val r: Position = agentOrientation.rightFrom(u.agent)
+                    val ur = u.copy(agent = if hitsWall(r) then u.agent else r, shouldBump = hitsWall(r))
+                    List((uf, p * forwardProbability), (ul, p * slipProbability), (ur, p * slipProbability))
+                  case u: UnobservableSansWumpus =>
+                    val f: Position = agentOrientation.forwardFrom(u.agent)
+                    val uf = u.copy(agent = if hitsWall(f) then u.agent else f, shouldBump = hitsWall(f))
+                    val l: Position = agentOrientation.leftFrom(u.agent)
+                    val ul = u.copy(agent = if hitsWall(l) then u.agent else l, shouldBump = hitsWall(l))
+                    val r: Position = agentOrientation.rightFrom(u.agent)
+                    val ur = u.copy(agent = if hitsWall(r) then u.agent else r, shouldBump = hitsWall(r))
+                    List((uf, p * forwardProbability), (ul, p * slipProbability), (ur, p * slipProbability))
+                }
+              )
+              .groupMapReduce(_._1)(_._2)(_ + _)
+          )
         case Move.TurnRight => (agentOrientation.turnRight, hasArrow, belief)
-        case Move.TurnLeft => (agentOrientation.turnLeft, hasArrow, belief)
+        case Move.TurnLeft  => (agentOrientation.turnLeft, hasArrow, belief)
         // move = Shoot only when hasArrow is true as dictated by possibleMoves
-        case Move.Shoot => (agentOrientation, false,
-          belief.toList.map((u, p) => (u match {
-            case u: UnobservableWithWumpus =>
-              val (xA, yA) = u.agent
-              val (xW, yW) = u.wumpus
-              agentOrientation match {
-                case Orientation.North if xW == xA && yW > yA => u.toSans
-                case Orientation.South if xW == xA && yW < yA => u.toSans
-                case Orientation.East if xW > xA && yW == yA => u.toSans
-                case Orientation.West if xW < xA && yW == yA => u.toSans
-                case _ => u
-              }
-            case u: UnobservableSansWumpus => assert(false, "Sans wumpus before shooting?!")
-          }, p)).groupMapReduce(_._1)(_._2)(_ + _)
-        )
+        case Move.Shoot =>
+          (
+            agentOrientation,
+            false,
+            belief.toList
+              .map((u, p) =>
+                (
+                  u match {
+                    case u: UnobservableWithWumpus =>
+                      val (xA, yA) = u.agent
+                      val (xW, yW) = u.wumpus
+                      agentOrientation match {
+                        case Orientation.North if xW == xA && yW > yA => u.toSans
+                        case Orientation.South if xW == xA && yW < yA => u.toSans
+                        case Orientation.East if xW > xA && yW == yA  => u.toSans
+                        case Orientation.West if xW < xA && yW == yA  => u.toSans
+                        case _                                        => u
+                      }
+                    case u: UnobservableSansWumpus => assert(false, "Sans wumpus before shooting?!")
+                  },
+                  p
+                )
+              )
+              .groupMapReduce(_._1)(_._2)(_ + _)
+          )
         case _ => (agentOrientation, hasArrow, belief)
       }
 
       // Filter out states in which agent is dead
-      val alive = posterior.filter ((u, p) => p > 0 && (u match {
-        case u: UnobservableWithWumpus => !StateWithWumpus(ao, ha, u).isTerminal
-        case u: UnobservableSansWumpus => !StateSansWumpus(ao, u).isTerminal
-      }))
+      val alive = posterior.filter((u, p) =>
+        p > 0 && (u match {
+          case u: UnobservableWithWumpus => !StateWithWumpus(ao, ha, u).isTerminal
+          case u: UnobservableSansWumpus => !StateSansWumpus(ao, u).isTerminal
+        })
+      )
 
       // normalize
       val t = alive.values.sum
       val sz = alive.size
-      BeliefState(ao, ha, alive.map((u, p) => u -> p/(if t == 0 then sz else t)), prevAction = move)
+      BeliefState(ao, ha, alive.map((u, p) => u -> p / (if t == 0 then sz else t)), prevAction = move)
 
     def sampleState: State =
       val sorted = belief.toList.sortBy(_._2)(using Ordering[BigDecimal].reverse).toMap
@@ -224,138 +286,117 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       val r = BigDecimal(Random.nextDouble()) * totalProbability
 
       u2State(
-        sorted.toList.foldLeft((sorted.head._1, BigDecimal(0), false)) {
-          case (acc, (u, p)) =>
+        sorted.toList
+          .foldLeft((sorted.head._1, BigDecimal(0), false)) { case (acc, (u, p)) =>
             val (sample, cumulative, isSet) = acc
             if isSet then (sample, cumulative, isSet)
             else if cumulative + p >= r then (u, cumulative + p, true)
             else (u, cumulative + p, isSet)
-        }._1
+          }
+          ._1
       )
 
     def chanceOfDeath: Map[Orientation, BigDecimal] =
-      belief.foldLeft (Map(
-        Orientation.North -> BigDecimal(0),
-        Orientation.South -> BigDecimal(0),
-        Orientation.East -> BigDecimal(0),
-        Orientation.West -> BigDecimal(0)
-      )) {
-        case (acc, (u, p)) => acc.map((ref, mort) =>
+      belief.foldLeft(
+        Map(
+          Orientation.North -> BigDecimal(0),
+          Orientation.South -> BigDecimal(0),
+          Orientation.East -> BigDecimal(0),
+          Orientation.West -> BigDecimal(0)
+        )
+      ) { case (acc, (u, p)) =>
+        acc.map((ref, mort) =>
           ref -> (u match {
             case u: UnobservableWithWumpus =>
               val danger = u.pits ++ Set(u.wumpus)
               if ref == agentOrientation then
                 mort + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnLeft then
                 mort + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnRight then
                 mort + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else
                 mort + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * slipProbability
                   else 0
                 }
             case u: UnobservableSansWumpus =>
               val danger = u.pits
               if ref == agentOrientation then
                 mort + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnLeft then
                 mort + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnRight then
                 mort + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.forwardFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.forwardFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * slipProbability
                   else 0
                 }
               else
                 mort + {
-                  if danger contains agentOrientation.backFrom(u.agent) then
-                    p * forwardProbability
+                  if danger contains agentOrientation.backFrom(u.agent) then p * forwardProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.leftFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.leftFrom(u.agent) then p * slipProbability
                   else 0
                 } + {
-                  if danger contains agentOrientation.rightFrom(u.agent) then
-                    p * slipProbability
+                  if danger contains agentOrientation.rightFrom(u.agent) then p * slipProbability
                   else 0
                 }
           })
@@ -363,13 +404,15 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       }
 
     def chanceOfGold: Map[Orientation, BigDecimal] =
-      belief.foldLeft (Map(
-        Orientation.North -> BigDecimal(0),
-        Orientation.South -> BigDecimal(0),
-        Orientation.East -> BigDecimal(0),
-        Orientation.West -> BigDecimal(0)
-      )) {
-        case (acc, (u, p)) => acc.map((ref, pGold) =>
+      belief.foldLeft(
+        Map(
+          Orientation.North -> BigDecimal(0),
+          Orientation.South -> BigDecimal(0),
+          Orientation.East -> BigDecimal(0),
+          Orientation.West -> BigDecimal(0)
+        )
+      ) { case (acc, (u, p)) =>
+        acc.map((ref, pGold) =>
           ref -> (u match {
             case u: UnobservableWithWumpus =>
               val danger = u.pits ++ Set(u.wumpus)
@@ -378,11 +421,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.forwardFrom(u.agent)
                   val l = agentOrientation.leftFrom(u.agent)
                   val r = agentOrientation.rightFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnLeft then
@@ -390,11 +432,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.leftFrom(u.agent)
                   val l = agentOrientation.backFrom(u.agent)
                   val r = agentOrientation.forwardFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnRight then
@@ -402,11 +443,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.rightFrom(u.agent)
                   val l = agentOrientation.forwardFrom(u.agent)
                   val r = agentOrientation.backFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else
@@ -414,11 +454,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.backFrom(u.agent)
                   val l = agentOrientation.rightFrom(u.agent)
                   val r = agentOrientation.leftFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
             case u: UnobservableSansWumpus =>
@@ -428,11 +467,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.forwardFrom(u.agent)
                   val l = agentOrientation.leftFrom(u.agent)
                   val r = agentOrientation.rightFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnLeft then
@@ -440,11 +478,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.leftFrom(u.agent)
                   val l = agentOrientation.backFrom(u.agent)
                   val r = agentOrientation.forwardFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else if ref == agentOrientation.turnRight then
@@ -452,11 +489,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.rightFrom(u.agent)
                   val l = agentOrientation.forwardFrom(u.agent)
                   val r = agentOrientation.backFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
               else
@@ -464,11 +500,10 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
                   val f = agentOrientation.backFrom(u.agent)
                   val l = agentOrientation.rightFrom(u.agent)
                   val r = agentOrientation.leftFrom(u.agent)
-                  if u.gold == f && !(danger contains f) then
-                    p * forwardProbability
+                  if u.gold == f && !(danger contains f) then p * forwardProbability
                   else if (u.gold == l && !(danger contains l)) ||
-                    (u.gold == r && !(danger contains r)) then
-                    p * slipProbability
+                    (u.gold == r && !(danger contains r))
+                  then p * slipProbability
                   else 0
                 }
           })
@@ -483,8 +518,8 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       this match {
         case North => (x, y + 1)
         case South => (x, y - 1)
-        case East => (x + 1, y)
-        case West => (x - 1, y)
+        case East  => (x + 1, y)
+        case West  => (x - 1, y)
       }
 
     def rightFrom(pos: Position): Position =
@@ -492,8 +527,8 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       this match {
         case North => (x + 1, y)
         case South => (x - 1, y)
-        case East => (x, y - 1)
-        case West => (x, y + 1)
+        case East  => (x, y - 1)
+        case West  => (x, y + 1)
       }
 
     def leftFrom(pos: Position): Position =
@@ -501,8 +536,8 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       this match {
         case North => (x - 1, y)
         case South => (x + 1, y)
-        case East => (x, y + 1)
-        case West => (x, y - 1)
+        case East  => (x, y + 1)
+        case West  => (x, y - 1)
       }
 
     def backFrom(pos: Position): Position =
@@ -510,29 +545,29 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
       this match {
         case North => (x, y - 1)
         case South => (x, y + 1)
-        case East => (x - 1, y)
-        case West => (x + 1, y)
+        case East  => (x - 1, y)
+        case West  => (x + 1, y)
       }
 
     def turnRight: Orientation = this match {
       case North => East
       case South => West
-      case East => South
-      case West => North
+      case East  => South
+      case West  => North
     }
 
     def turnLeft: Orientation = this match {
       case North => West
       case South => East
-      case East => North
-      case West => South
+      case East  => North
+      case West  => South
     }
 
     def turnBack: Orientation = this match {
       case North => South
       case South => North
-      case East => West
-      case West => East
+      case East  => West
+      case West  => East
     }
 
   private enum Move(val action: Int):
@@ -545,8 +580,8 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
 
   private def neighborsOf(sq: Position): Set[Position] =
     val (x, y) = sq
-    Set((x, y + 1), (x, y - 1), (x + 1, y), (x - 1, y)) filter {
-      case (x, y) => x >= 1 && x <= 4 && y >= 1 && y <= 4
+    Set((x, y + 1), (x, y - 1), (x + 1, y), (x - 1, y)) filter { case (x, y) =>
+      x >= 1 && x <= 4 && y >= 1 && y <= 4
     }
 
   private def manhattanDistance(pos1: Position, pos2: Position): Int =
@@ -619,19 +654,16 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
           case LearningState.Running =>
             learningExperience += o.bump
             val failureCount = learningExperience.count(!_)
-            if !o.bump && failureCount == 1 then
-              agentPosPrior -= ((1, 1)) += ((2, 1))
+            if !o.bump && failureCount == 1 then agentPosPrior -= ((1, 1)) += ((2, 1))
             if learningExperience.length == maxLearningIters || failureCount == 2 then
-              if failureCount == 2 then
-                agentPosPrior -= ((2, 1)) ++= Set((1, 1), (3, 1))
+              if failureCount == 2 then agentPosPrior -= ((2, 1)) ++= Set((1, 1), (3, 1))
               actionQueue enqueue Action.TURN_LEFT
               LearningState.Stop
             else if o.breeze then
               actionQueue enqueue Action.NO_OP
               LearningState.GivenUp
             else
-              if agentPosPrior.toSet == Set((2, 1)) then
-                pitFree ++= Set((2, 2), (3, 1))
+              if agentPosPrior.toSet == Set((2, 1)) then pitFree ++= Set((2, 2), (3, 1))
               if o.stench then
                 if hasArrow then
                   hasArrow = false
@@ -671,7 +703,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
 
     val possiblePitCombinations = (allSquares diff pitFree).toList.combinations(2).toSet.map {
       case Seq(p1, p2) => (p1, p2)
-      case _ => assert(false, "Wtf?! 2-combinations should have size 2.")
+      case _           => assert(false, "Wtf?! 2-combinations should have size 2.")
     }
 
     val possibleWumpusPositions =
@@ -684,21 +716,23 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
 
     val unweighted: Set[Unobservable] =
       if possibleWumpusPositions nonEmpty then
-        possiblePitCombinations flatMap {
-          case (p1, p2) => possibleWumpusPositions flatMap (w =>
-            possibleGoldLocations flatMap (g => agentPosPrior map (a =>
-              UnobservableWithWumpus(a, g, w, p1, p2, false)
-              ))
+        possiblePitCombinations flatMap { case (p1, p2) =>
+          possibleWumpusPositions flatMap (w =>
+            possibleGoldLocations flatMap (g =>
+              agentPosPrior map (a => UnobservableWithWumpus(a, g, w, p1, p2, false))
             )
-        }
-      else possiblePitCombinations flatMap {
-        case (p1, p2) => possibleGoldLocations flatMap (g =>
-          agentPosPrior map (a => UnobservableSansWumpus(a, g, p1, p2, false))
           )
-      }
+        }
+      else
+        possiblePitCombinations flatMap { case (p1, p2) =>
+          possibleGoldLocations flatMap (g =>
+            agentPosPrior map (a => UnobservableSansWumpus(a, g, p1, p2, false))
+          )
+        }
 
     val s = unweighted.size
-    val weighted: Map[Unobservable, BigDecimal] = unweighted.map(u => u -> BigDecimal(1) / BigDecimal(s)).toMap
+    val weighted: Map[Unobservable, BigDecimal] =
+      unweighted.map(u => u -> BigDecimal(1) / BigDecimal(s)).toMap
 
     BeliefState(Orientation.East, hasArrow, weighted, lastAction)
   }
@@ -733,9 +767,11 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
           (List(Action.TURN_LEFT), globB.transition(Move.TurnLeft).transition(Move.Shoot)),
           (List(Action.TURN_RIGHT), globB.transition(Move.TurnRight).transition(Move.Shoot))
         )
-        val (beforeShot, afterShot, best) = shots.map { (prefix, belief) =>
-          (prefix, belief, difference(belief).maxBy(_._2))
-        }.maxBy(_._3._2)
+        val (beforeShot, afterShot, best) = shots
+          .map { (prefix, belief) =>
+            (prefix, belief, difference(belief).maxBy(_._2))
+          }
+          .maxBy(_._3._2)
         if best._2 > 0 then
           actionQueue.enqueueAll(beforeShot :+ Action.SHOOT)
           actionQueue.enqueueAll(turns(afterShot.agentOrientation, best._1))
@@ -780,8 +816,7 @@ object ReactiveLearningAgent extends AgentFunctionImpl:
         else if forwardProbability == BigDecimal("0.8") then
           actionQueue.enqueue(SimpleReflexHelper.process(percept, true).action)
         else actionQueue.enqueue(StochasticModelBasedHelper.process(percept).action)
-      else if forwardProbability == 1 then
-        actionQueue.enqueue(ModelBasedReflexAgent.process(tp))
+      else if forwardProbability == 1 then actionQueue.enqueue(ModelBasedReflexAgent.process(tp))
       else if forwardProbability == BigDecimal("0.8") then
         actionQueue.enqueue(SimpleReflexHelper.process(percept).action)
       else actionQueue.enqueue(StochasticModelBasedHelper.process(percept).action)

@@ -7,7 +7,10 @@ object LLMBasedAgent extends AgentFunctionImpl:
   def configure(forwardProbability: Double): Unit =
     val key = sys.env.getOrElse("GOOGLE_API_KEY", "")
     require(key.nonEmpty, "Set GOOGLE_API_KEY before running the LLM agent.")
-    configureClient(new GeminiClient(key, sys.env.getOrElse("GOOGLE_MODEL", "gemini-2.5-flash")), forwardProbability)
+    configureClient(
+      new GeminiClient(key, sys.env.getOrElse("GOOGLE_MODEL", "gemini-2.5-flash")),
+      forwardProbability
+    )
 
   /** Dependency injection for offline tests and alternative completion services. */
   def configureClient(completionClient: CompletionClient, forwardProbability: Double): Unit =
@@ -18,8 +21,11 @@ object LLMBasedAgent extends AgentFunctionImpl:
     reset()
 
   override def reset(): Unit =
-    messages = ujson.Arr(ujson.Obj("role" -> "system", "content" ->
-      s"""You are Theseus in a 4x4 Wumpus world, starting at (1,1), facing east.
+    messages = ujson.Arr(
+      ujson.Obj(
+        "role" -> "system",
+        "content" ->
+          s"""You are Theseus in a 4x4 Wumpus world, starting at (1,1), facing east.
          |There are two distinct pits, one Wumpus, and one gold. These may overlap;
          |the starting square has no hazard. Breeze/stench means a pit/live Wumpus
          |is orthogonally adjacent. Glitter means gold is here. A scream means the
@@ -34,7 +40,9 @@ object LLMBasedAgent extends AgentFunctionImpl:
          |Return JSON with best_action and belief_state_after_action.
          |Maximize the expected total score. Observations and executed actions
          |follow as messages; infer your position from that history.
-         |""".stripMargin))
+         |""".stripMargin
+      )
+    )
 
   def stop(): Unit =
     val old = client
@@ -43,8 +51,11 @@ object LLMBasedAgent extends AgentFunctionImpl:
 
   override def process(tp: TransferPercept): Int =
     val active = client.getOrElse(throw new IllegalStateException("LLM agent is not configured."))
-    messages.value += ujson.Obj("role" -> "user", "content" ->
-      s"bump=${tp.getBump}, glitter=${tp.getGlitter}, breeze=${tp.getBreeze}, stench=${tp.getStench}, scream=${tp.getScream}")
+    messages.value += ujson.Obj(
+      "role" -> "user",
+      "content" ->
+        s"bump=${tp.getBump}, glitter=${tp.getGlitter}, breeze=${tp.getBreeze}, stench=${tp.getStench}, scream=${tp.getScream}"
+    )
     val (action, belief) = LlmResponse.decode(active.query(messages))
     println(belief)
     val name = LlmResponse.actions.find(_._2 == action).get._1

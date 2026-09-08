@@ -3,9 +3,11 @@ import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.time.Duration
 
 /** Enforce spacing before requests using monotonic elapsed time. */
-final class RequestRateLimiter(intervalMillis: Long = 4000,
-                               now: () => Long = () => System.nanoTime(),
-                               sleep: Long => Unit = millis => Thread.sleep(millis)):
+final class RequestRateLimiter(
+    intervalMillis: Long = 4000,
+    now: () => Long = () => System.nanoTime(),
+    sleep: Long => Unit = millis => Thread.sleep(millis)
+):
   require(intervalMillis >= 0)
   private var previous: Option[Long] = None
   def acquire(): Unit =
@@ -32,25 +34,36 @@ final class GeminiClient(apiKey: String, model: String) extends CompletionClient
       "model" -> model,
       "messages" -> messages,
       "max_tokens" -> 2048,
-      "response_format" -> ujson.Obj("type" -> "json_schema", "json_schema" -> ujson.Obj(
-        "name" -> "agent_action", "strict" -> true,
-        "schema" -> ujson.Obj("type" -> "object", "additionalProperties" -> false,
-          "properties" -> ujson.Obj(
-            "best_action" -> ujson.Obj("type" -> "string", "enum" -> ujson.Arr.from(LlmResponse.actions.keys.toList.sorted)),
-            "belief_state_after_action" -> ujson.Obj("type" -> "string")
-          ),
-          "required" -> ujson.Arr("best_action", "belief_state_after_action")
+      "response_format" -> ujson.Obj(
+        "type" -> "json_schema",
+        "json_schema" -> ujson.Obj(
+          "name" -> "agent_action",
+          "strict" -> true,
+          "schema" -> ujson.Obj(
+            "type" -> "object",
+            "additionalProperties" -> false,
+            "properties" -> ujson.Obj(
+              "best_action" -> ujson
+                .Obj("type" -> "string", "enum" -> ujson.Arr.from(LlmResponse.actions.keys.toList.sorted)),
+              "belief_state_after_action" -> ujson.Obj("type" -> "string")
+            ),
+            "required" -> ujson.Arr("best_action", "belief_state_after_action")
+          )
         )
-      ))
+      )
     )
-    val request = HttpRequest.newBuilder(URI.create("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"))
+    val request = HttpRequest
+      .newBuilder(URI.create("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"))
       .timeout(Duration.ofSeconds(30))
       .header("Authorization", "Bearer " + apiKey)
       .header("Content-Type", "application/json")
-      .POST(HttpRequest.BodyPublishers.ofString(body.toString)).build()
+      .POST(HttpRequest.BodyPublishers.ofString(body.toString))
+      .build()
     val response = http.send(request, HttpResponse.BodyHandlers.ofString())
     if response.statusCode() != 200 then
-      throw new IllegalStateException(s"Gemini request failed (HTTP ${response.statusCode()}). Check model access, quota, and credentials.")
+      throw new IllegalStateException(
+        s"Gemini request failed (HTTP ${response.statusCode()}). Check model access, quota, and credentials."
+      )
     val content = ujson.read(response.body())("choices")(0)("message")("content").str
     content
 
@@ -58,13 +71,16 @@ final class GeminiClient(apiKey: String, model: String) extends CompletionClient
 
 object LlmResponse:
   val actions: Map[String, Int] = Map(
-    "forward" -> Action.GO_FORWARD, "right" -> Action.TURN_RIGHT,
-    "left" -> Action.TURN_LEFT, "shoot" -> Action.SHOOT,
-    "grab" -> Action.GRAB, "nothing" -> Action.NO_OP
+    "forward" -> Action.GO_FORWARD,
+    "right" -> Action.TURN_RIGHT,
+    "left" -> Action.TURN_LEFT,
+    "shoot" -> Action.SHOOT,
+    "grab" -> Action.GRAB,
+    "nothing" -> Action.NO_OP
   )
   def decode(json: String): (Int, String) =
     val response = ujson.read(json)
     val name = response("best_action").str
-    val action = actions.getOrElse(name,
-      throw new IllegalArgumentException("LLM returned an unsupported action."))
+    val action =
+      actions.getOrElse(name, throw new IllegalArgumentException("LLM returned an unsupported action."))
     (action, response("belief_state_after_action").str)

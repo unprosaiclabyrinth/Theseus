@@ -23,7 +23,15 @@ enum ShapingKind:
   case None, Legacy, Potential
 
 object PlannerOptions:
-  val names = Set("--simulations", "--horizon", "--discount", "--exploration", "--tree-policy", "--rollout", "--shaping")
+  val names = Set(
+    "--simulations",
+    "--horizon",
+    "--discount",
+    "--exploration",
+    "--tree-policy",
+    "--rollout",
+    "--shaping"
+  )
   def accepts(name: String): Boolean = names.contains(name)
   def parse(options: java.util.Map[String, String]): PlannerConfig =
     def value(key: String, default: String) = Option(options.get(key)).getOrElse(default)
@@ -35,17 +43,17 @@ object PlannerOptions:
       value("--tree-policy", "heuristic") match {
         case "canonical" => TreePolicyKind.CanonicalUCT
         case "heuristic" => TreePolicyKind.HeuristicUCT
-        case _ => throw new IllegalArgumentException("Tree policy must be canonical or heuristic.")
+        case _           => throw new IllegalArgumentException("Tree policy must be canonical or heuristic.")
       },
       value("--rollout", "informed") match {
-        case "uniform" => RolloutKind.Uniform
+        case "uniform"  => RolloutKind.Uniform
         case "informed" => RolloutKind.Informed
-        case _ => throw new IllegalArgumentException("Rollout must be uniform or informed.")
+        case _          => throw new IllegalArgumentException("Rollout must be uniform or informed.")
       },
       value("--shaping", "potential") match {
-        case "none" => ShapingKind.None
-        case "legacy" => ShapingKind.Legacy
+        case "none"      => ShapingKind.None
+        case "legacy"    => ShapingKind.Legacy
         case "potential" => ShapingKind.Potential
-        case _ => throw new IllegalArgumentException("Shaping must be none, legacy, or potential.")
+        case _           => throw new IllegalArgumentException("Shaping must be none, legacy, or potential.")
       }
     )
