@@ -19,4 +19,3 @@ Source: `1d29b3fb2540c5a15ae3567ba9781bedbc113add`; dirty: True; seed: 42; primi
 | B-n1000-d0.2-h15-snone | 30 | -383.1 [-564.2, -201.9] |
 | C-n1000-d0.2-h15-spotential | 30 | -292.1 [-461.2, -123.0] |
 | D-n1000-d0.2-h15-spotential | 30 | 65.4 [-66.6, 197.3] |
-

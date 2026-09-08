@@ -23,4 +23,3 @@ Source: `c2ef6ac7374c12519cbb1afec570ca22bd3478f8`; dirty: False; seed: 42; prim
 | D-n100-d0.9-h15-spotential | 100 | -8.7 [-156.7, 139.2] |
 | D-n100-d0.95-h15-spotential | 100 | -39.1 [-168.4, 90.2] |
 | D-n100-d0.99-h15-spotential | 100 | -187.2 [-338.0, -36.4] |
-
