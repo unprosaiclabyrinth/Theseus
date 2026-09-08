@@ -20,6 +20,9 @@ jobs:
       - uses: VirtusLab/scala-cli-setup@v1
         with:
           version: '1.14.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: make lint
       - run: make test
       - run: git diff --exit-code
