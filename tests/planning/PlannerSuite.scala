@@ -136,3 +136,47 @@ class PlannerSuite extends munit.FunSuite:
     assertEquals(parsed.planner().simulations,250)
     assertEquals(parsed.planner().treePolicy,TreePolicyKind.CanonicalUCT)
   }
+
+  test("every macro matches the Java simulator's score, position and outcome") {
+    val console = System.out
+    val discard = new java.io.PrintStream(java.io.OutputStream.nullOutputStream())
+    System.setOut(discard)
+    try
+      for o <- Orientation.values; m <- Move.values do
+        val sampleWorlds = Vector(world, world.copy(gold=(2,2)), world.copy(pit1=o.forwardFrom((2,2))))
+        for u <- sampleWorlds do
+          val state = StateWithWumpus((2,2),o,true,u)
+          val grid = Array.fill(4,4,4)(' ')
+          def put(pos: Position, layer: Int, marker: Char) = grid(pos._2-1)(pos._1-1)(layer)=marker
+          put(u.pit1,0,'P'); put(u.pit2,0,'P'); put(u.wumpus,1,'W'); put(u.gold,2,'G')
+          put((2,2),3,o match
+            case Orientation.North => 'A'
+            case Orientation.South => 'V'
+            case Orientation.East => '>'
+            case Orientation.West => '<')
+          val actions = scala.collection.mutable.Queue.from(m.toActionSeq())
+          val count = actions.size
+          val function = new AgentFunction("macro-test",new AgentFunctionImpl:
+            def reset(): Unit = ()
+            def process(tp: TransferPercept): Int = actions.dequeue())
+          val writer = new java.io.BufferedWriter(java.io.Writer.nullWriter())
+          val environment = new Environment(4,grid,writer)
+          val simulation = new Simulation(environment,count,writer,1,function,new java.util.Random(42))
+          val successor = state.transition(m)
+          assertEquals(simulation.getScore(),state.reward(m),s"$o $m $u")
+          assertEquals(simulation.getMetrics().goldCollected(),successor==Won)
+          assertEquals(simulation.getMetrics().died(),successor.isTerminal && successor!=Won)
+          assertEquals(simulation.getMetrics().arrowsFired(),if RolloutPolicies.shots.contains(m) then 1 else 0)
+          assertEquals(simulation.getMetrics().wumpusKills(),if successor.isInstanceOf[StateSansWumpus] then 1 else 0)
+          val expectedPosition = successor match
+            case s: StateWithWumpus => s.agentPosition
+            case s: StateSansWumpus => s.agentPosition
+            case Won => (2,2)
+          assertEquals(environment.getAgentLocation().toVector,Vector(expectedPosition._2-1,expectedPosition._1-1))
+          val before = simulation.getScore()
+          simulation.handleAction(Action.GO_FORWARD)
+          assertEquals(simulation.getScore(),before)
+    finally
+      System.setOut(console)
+      discard.close()
+  }

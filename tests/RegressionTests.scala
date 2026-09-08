@@ -194,7 +194,8 @@ object RegressionTests:
         assert(WorldApplication.run(Array("--agent", "sra", "-t", "20", "-s", "10", "-r", "42", "-n", "0.8", "--quiet", "-f", path.toString)) == 0)
       val a = Files.readString(folder.resolve("first.txt.scores.csv"))
       val b = Files.readString(folder.resolve("second.txt.scores.csv"))
-      assert(a == b)
+      def deterministicRows(csv: String) = csv.linesIterator.map(_.split(",").dropRight(1).toVector).toVector
+      assert(deterministicRows(a) == deterministicRows(b))
       assert(a.linesIterator.size == 21)
     }
     check("mixed evaluation retains every group's scores") {

@@ -120,7 +120,7 @@ class WorldApplication {
                 + (c.agent.equals("uba") ? " planner=" + c.planner : "");
             console.println(metadata);
             output.write(metadata + "\n");
-            scores.write("trial,seed,agent,forward_probability,score\n");
+            scores.write("trial,seed,agent,forward_probability,score,primitive_actions,arrows_fired,wumpus_kills,died,gold_collected,planning_nanos\n");
             long total = 0;
             for (int trial = 0; trial < c.trials; trial++) {
                 int trialSeed = c.seed + trial;
@@ -128,19 +128,24 @@ class WorldApplication {
                 AgentRandom.seed(trialSeed);
                 function.reset();
                 int score;
+                Simulation.Metrics metrics;
                 try {
                     if (c.quiet) System.setOut(quietConsole);
                     BufferedWriter trace = c.quiet ? discard : output;
                     if (!c.quiet) trace.write("Trial " + (trial + 1) + " seed=" + trialSeed + "\n");
                     Environment world = new Environment(4, generateRandomWumpusWorld(trialSeed, 4, false), trace);
-                    score = new Simulation(world, c.steps, trace, probability, function,
-                        new Random(((long)trialSeed) ^ 0x5DEECE66DL)).getScore();
+                    Simulation simulation = new Simulation(world, c.steps, trace, probability, function,
+                        new Random(((long)trialSeed) ^ 0x5DEECE66DL));
+                    score = simulation.getScore();
+                    metrics = simulation.getMetrics();
                 } finally {
                     System.setOut(console);
                     function.reset();
                 }
                 total += score;
-                scores.write((trial + 1) + "," + trialSeed + "," + c.agent + "," + probability + "," + score + "\n");
+                scores.write((trial + 1) + "," + trialSeed + "," + c.agent + "," + probability + "," + score + ","
+                    + metrics.primitiveActions() + "," + metrics.arrowsFired() + "," + metrics.wumpusKills() + ","
+                    + metrics.died() + "," + metrics.goldCollected() + "," + metrics.planningNanos() + "\n");
                 scores.flush(); // completed trials survive an error in a later trial
                 output.write("Trial " + (trial + 1) + " score: " + score + "\n");
             }

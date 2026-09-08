@@ -23,6 +23,14 @@ class Simulation {
 	private static final int deathCost = -1000;
 	private static final int shootCost = -10;
     private int lastAction = 0;
+    private int primitiveActions, arrowsFired, wumpusKills;
+    private long planningNanos;
+    record Metrics(int primitiveActions, int arrowsFired, int wumpusKills,
+                   boolean died, boolean goldCollected, long planningNanos) {}
+    public Metrics getMetrics() {
+        return new Metrics(primitiveActions, arrowsFired, wumpusKills,
+            agent.getIsDead(), agent.getHasGold(), planningNanos);
+    }
 	
 	private boolean simulationRunning;
 	
@@ -65,7 +73,10 @@ class Simulation {
 				System.out.println("Time step: " + stepCounter);
 				outputWriter.write("Time step: " + stepCounter + "\n");
 				
-				handleAction(agent.chooseAction());
+				long planningStart = System.nanoTime();
+                int chosenAction = agent.chooseAction();
+                planningNanos += System.nanoTime() - planningStart;
+                handleAction(chosenAction);
 				wumpusEnvironment.placeAgent(agent);
 				
 				environment.printEnvironment();
@@ -103,6 +114,7 @@ class Simulation {
 			throw new IllegalStateException("Simulation failed.", e);
 		}
 
+        simulationRunning = false;
 		printEndWorld();
 	}
 	
@@ -172,6 +184,8 @@ class Simulation {
 	}
 	
 	public void handleAction(int action) {
+        if (!simulationRunning) return;
+        if (action != Action.END_TRIAL) primitiveActions++;
 		try {
 			if (action == Action.GO_FORWARD) {
 				if (environment.getBump()) environment.setBump(false);
@@ -225,7 +239,11 @@ class Simulation {
 				lastAction = Action.GRAB;
 			} else if (action == Action.SHOOT) {
 				if (agent.shootArrow()) {
-					if (environment.shootArrow()) environment.setScream(true);
+					arrowsFired++;
+                    if (environment.shootArrow()) {
+                        environment.setScream(true);
+                        wumpusKills++;
+                    }
 					currScore += shootCost;
 				} else {
 					if (environment.getScream()) environment.setScream(false);
