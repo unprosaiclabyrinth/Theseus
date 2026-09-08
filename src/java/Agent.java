@@ -19,6 +19,7 @@ import java.util.Random;
 
 class Agent {
 	private final double forwardProbability;
+	private final Random random;
 	
 	private final int[] location;
 	private char direction;
@@ -35,6 +36,14 @@ class Agent {
 	private final AgentFunction agentFunction;
 	
 	public Agent(Environment world, TransferPercept perceptTrans, double forwardProbability) {
+        this(world, perceptTrans, forwardProbability, new AgentFunction(), new Random());
+    }
+
+    public Agent(Environment world, TransferPercept perceptTrans, double forwardProbability,
+                 AgentFunction function, Random random) {
+        if (!Double.isFinite(forwardProbability) || forwardProbability < 0 || forwardProbability > 1)
+            throw new IllegalArgumentException("Forward probability must be finite and in [0,1].");
+        this.random = random;
 		// set forward probability
 		this.forwardProbability = forwardProbability;
 		
@@ -43,7 +52,7 @@ class Agent {
 		hasGold = false;
 		
 		wumpusWorld = world;
-		agentFunction = new AgentFunction();
+		agentFunction = function;
 		percept = perceptTrans;
 		
 		worldSize = wumpusWorld.getWorldSize();
@@ -149,7 +158,7 @@ class Agent {
 	
 	private char nonDeterministicMove() {
 		double halfRemainder = (1 - forwardProbability)/2D;
-		double rand = Math.random();
+		double rand = random.nextDouble();
 
 		if(rand < forwardProbability)
 			return 'F';

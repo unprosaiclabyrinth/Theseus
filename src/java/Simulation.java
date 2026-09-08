@@ -23,6 +23,14 @@ class Simulation {
 	private static final int deathCost = -1000;
 	private static final int shootCost = -10;
     private int lastAction = 0;
+    private int primitiveActions, arrowsFired, wumpusKills;
+    private long planningNanos;
+    record Metrics(int primitiveActions, int arrowsFired, int wumpusKills,
+                   boolean died, boolean goldCollected, long planningNanos) {}
+    public Metrics getMetrics() {
+        return new Metrics(primitiveActions, arrowsFired, wumpusKills,
+            agent.getIsDead(), agent.getHasGold(), planningNanos);
+    }
 	
 	private boolean simulationRunning;
 	
@@ -32,6 +40,13 @@ class Simulation {
 	private final BufferedWriter outputWriter;
 	
 	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, double forwardProbability) {
+        this(wumpusEnvironment, maxSteps, outWriter, forwardProbability,
+             new AgentFunction(), new java.util.Random());
+    }
+
+    public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter,
+                      double forwardProbability, AgentFunction function, java.util.Random random) {
+        if (maxSteps < 1) throw new IllegalArgumentException("Maximum steps must be positive.");
 		// start the simulator
 		simulationRunning = true;
 		
@@ -39,7 +54,7 @@ class Simulation {
 		transferPercept = new TransferPercept(wumpusEnvironment);
 		environment = wumpusEnvironment;
 		
-		agent = new Agent(environment, transferPercept, forwardProbability);
+		agent = new Agent(environment, transferPercept, forwardProbability, function, random);
 		
 		environment.placeAgent(agent);
 		environment.printEnvironment();
@@ -58,7 +73,10 @@ class Simulation {
 				System.out.println("Time step: " + stepCounter);
 				outputWriter.write("Time step: " + stepCounter + "\n");
 				
-				handleAction(agent.chooseAction());
+				long planningStart = System.nanoTime();
+                int chosenAction = agent.chooseAction();
+                planningNanos += System.nanoTime() - planningStart;
+                handleAction(chosenAction);
 				wumpusEnvironment.placeAgent(agent);
 				
 				environment.printEnvironment();
@@ -93,9 +111,10 @@ class Simulation {
 			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 
+        simulationRunning = false;
 		printEndWorld();
 	}
 	
@@ -110,7 +129,7 @@ class Simulation {
 			outputWriter.write("Last action: " + Action.printAction(lastAction) + "\n");
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	
@@ -160,11 +179,13 @@ class Simulation {
 			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	
 	public void handleAction(int action) {
+        if (!simulationRunning) return;
+        if (action != Action.END_TRIAL) primitiveActions++;
 		try {
 			if (action == Action.GO_FORWARD) {
 				if (environment.getBump()) environment.setBump(false);
@@ -218,7 +239,11 @@ class Simulation {
 				lastAction = Action.GRAB;
 			} else if (action == Action.SHOOT) {
 				if (agent.shootArrow()) {
-					if (environment.shootArrow()) environment.setScream(true);
+					arrowsFired++;
+                    if (environment.shootArrow()) {
+                        environment.setScream(true);
+                        wumpusKills++;
+                    }
 					currScore += shootCost;
 				} else {
 					if (environment.getScream()) environment.setScream(false);
@@ -236,10 +261,15 @@ class Simulation {
 				if (environment.getScream()) environment.setScream(false);
 				
 				lastAction = Action.NO_OP;
-			}
+            } else if (action == Action.END_TRIAL) {
+                simulationRunning = false;
+                lastAction = Action.END_TRIAL;
+            } else {
+                throw new IllegalArgumentException("Invalid action: " + action);
+            }
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			throw new IllegalStateException("Simulation failed.", e);
 		}
 	}
 	

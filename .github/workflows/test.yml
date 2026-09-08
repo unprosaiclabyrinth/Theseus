@@ -1,0 +1,41 @@
+name: Test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: VirtusLab/scala-cli-setup@v1
+        with:
+          scala-cli-version: '1.14.0'
+          # Keep the JDK 21 installed above instead of the action's JDK 17 default.
+          jvm: ''
+      - name: Expose Scala CLI as the project's scala command
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/theseus-bin"
+          # Coursier's launcher locates a sibling .aux file through $0, so use
+          # a forwarding script rather than moving it or creating a symlink.
+          printf '%s\n' '#!/bin/sh' 'exec scala-cli "$@"' > "$RUNNER_TEMP/theseus-bin/scala"
+          chmod +x "$RUNNER_TEMP/theseus-bin/scala"
+          echo "$RUNNER_TEMP/theseus-bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: make check
+      - run: make lint
+      - run: make test
+      - run: git diff --exit-code

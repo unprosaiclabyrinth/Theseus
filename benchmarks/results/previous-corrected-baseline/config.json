@@ -1,0 +1,13 @@
+{
+  "revision": "028fc33",
+  "agent": "uba",
+  "seed": 42,
+  "trials": 30,
+  "steps": 50,
+  "simulations": 1000,
+  "horizon": 15,
+  "discount": 0.2,
+  "mean_score": 507.3333333333333,
+  "elapsed_seconds": 242.30478383402806,
+  "metrics_note": "This earlier CSV predates outcome/timing columns; no death/gold rates are inferred."
+}

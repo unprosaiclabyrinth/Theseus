@@ -1,0 +1,151 @@
+{
+  "commit": "9f7ee2481799cc2dcf54f3e689b2b66a4ef1dc1d",
+  "dirty": false,
+  "build_classes_sha256": "bb6b015b0dc362d89852bd05249668e02fa5069abbce46c8925cdd448d2ff5dd",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "java": "openjdk 22.0.1 2024-04-16\nOpenJDK Runtime Environment (build 22.0.1+8-16)\nOpenJDK 64-Bit Server VM (build 22.0.1+8-16, mixed mode, sharing)\n",
+  "seed": 42,
+  "steps": 50,
+  "horizon": 15,
+  "confidence_note": "Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.",
+  "experiments": {
+    "D-n100-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 269.7,
+      "score_sd": 499.38407619342007,
+      "mean_score_normal_95_ci": [
+        -39.82145716609409,
+        579.2214571660941
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.3,
+      "mean_primitive_actions": 36.6,
+      "arrows_fired": 1,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 24.280851484,
+      "elapsed_seconds": 24.462549125018995,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 100,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n250-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 77.6,
+      "score_sd": 742.9262263359517,
+      "mean_score_normal_95_ci": [
+        -382.87044570429384,
+        538.0704457042939
+      ],
+      "death_rate": 0.2,
+      "gold_rate": 0.3,
+      "mean_primitive_actions": 31.2,
+      "arrows_fired": 0,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 40.211600786,
+      "elapsed_seconds": 40.43551070900867,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 250,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n500-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 369.4,
+      "score_sd": 532.6600333337495,
+      "mean_score_normal_95_ci": [
+        39.2538909203314,
+        699.5461090796686
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.4,
+      "mean_primitive_actions": 34.9,
+      "arrows_fired": 4,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 42.572340626,
+      "elapsed_seconds": 42.78051133302506,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 500,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n1000-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 372.3,
+      "score_sd": 534.6756129758595,
+      "mean_score_normal_95_ci": [
+        40.904621715322605,
+        703.6953782846774
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.4,
+      "mean_primitive_actions": 32.4,
+      "arrows_fired": 3,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 53.693044953,
+      "elapsed_seconds": 53.912902707990725,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 1000,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n2500-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 476,
+      "score_sd": 544.8212754860278,
+      "mean_score_normal_95_ci": [
+        138.31627494223403,
+        813.683725057766
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.5,
+      "mean_primitive_actions": 28.3,
+      "arrows_fired": 3,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 109.063582285,
+      "elapsed_seconds": 109.32835154200438,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 2500,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n5000-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 478.6,
+      "score_sd": 542.2697565685264,
+      "mean_score_normal_95_ci": [
+        142.49772275160717,
+        814.7022772483929
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.5,
+      "mean_primitive_actions": 28.6,
+      "arrows_fired": 3,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 205.427519289,
+      "elapsed_seconds": 205.7648102500243,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 5000,
+      "discount": 0.2,
+      "horizon": 15
+    }
+  }
+}

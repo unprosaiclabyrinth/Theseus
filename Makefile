@@ -1,115 +1,55 @@
-# Default target
-all:
-	@echo "Specify an agent target. Available agent targets: run, sra, mra, uba, rla-deterministic, rla-biased, rla-uniform, lba"
+# Requires Scala CLI (the modern `scala` command) and JDK 21+.
+.DEFAULT_GOAL := help
+.PHONY: help all check build test lint format run sra mra uba rla rla-deterministic rla-biased rla-uniform lba tenk la-tenk clean
 
-# Simple reflex agent
-sra: src/scala/SimpleReflexAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn SimpleReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make run
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
+help all:
+	@echo 'Targets: check build test run sra mra uba rla-deterministic rla-biased rla-uniform lba tenk la-tenk clean'
+	@echo 'Custom options: ./scripts/run.sh --help'
 
-# Model-based reflex agent
-mra: src/scala/ModelBasedReflexAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn ModelBasedReflexAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make run
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# Utility-based agent
-uba: src/scala/UtilityBasedAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn UtilityBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make run
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# Reactive learning agent
-rla: src/scala/ReactiveLearningAgent.scala
-	@echo "RLA targets are: rla-deterministic, rla-biased, rla-uniform. Specify one of these targets to run the RLS with the corresponding forward probability."
-
-# Reactive learning agent with deterministic forward probability
-rla-deterministic: src/scala/ReactiveLearningAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make build
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.00 -a false
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# Reactive learning agent with biased forward probability
-rla-biased: src/scala/ReactiveLearningAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make build
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.8 -a false
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# Reactive learning agent with uniform forward probability
-rla-uniform: src/scala/ReactiveLearningAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn ReactiveLearningAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make build
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.3334 -a false
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# LLM-based agent
-# Requires the GOOGLE_API_KEY env var to be set
-lba: src/scala/LLMBasedAgent.scala
-	@sed -i '.orig' 's|.*// specify agent|\t\treturn LLMBasedAgent.process(tp); // specify agent|' src/java/AgentFunction.java
-	@make run
-	@if [[ -f src/java/AgentFunction.java.orig ]]; then mv src/java/AgentFunction.java.orig src/java/AgentFunction.java; fi
-
-# Check if required tools are installed
 check:
-	@echo "Checking for required tools..."
+	./scripts/check.sh
 
-	@command -v java >/dev/null 2>&1 || { echo >&2 "java is required but not installed. Aborting :("; exit 1; }
-	@java --version
+build:
+	./scripts/build.sh
 
-	@command -v scala >/dev/null 2>&1 || { echo >&2 "scala is required but not installed. Aborting :("; exit 1; }
-	@scala --version
+test:
+	./scripts/test.sh
 
-	@echo "All required tools are installed :)"
+format:
+	./scripts/format.sh
 
-# Build the project
-build: clean
-	@printf "Building the agent"
-	@mkdir -p target & pid=$$!; \
-		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
-		wait $$pid
-	@scalac -classpath "lib/*" -d target src/java/*.java src/scala/*.scala & pid=$$!; \
-		while kill -0 $$pid 2> /dev/null; do printf "."; sleep 0.5; done; \
-		wait $$pid
-	@javac -d target -cp target src/java/*.java & pid=$$!; \
-		while kill -0 $$pid 2> /dev/null; do sleep 0.25; printf "."; sleep 0.25; done; \
-		wait $$pid
-	@echo
+lint:
+	./scripts/format.sh --check
+	python3 -m py_compile scripts/benchmark.py scripts/summarize_benchmarks.py
+	@for script in scripts/*.sh; do sh -n "$$script" || exit; done
+	@if [ -e .git ]; then git diff --check; fi
 
-# Run the project
-run: build
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.00 -a false
+run uba:
+	./scripts/run.sh --agent uba
 
-tenk: build
-	@echo "Running the agent 10,000 times..."
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.00 -a false -t 10000 > /dev/null 
-	@tail -n1 wumpus_out.txt
-	@echo "Complete results in wumpus_out.txt"
+sra:
+	./scripts/run.sh --agent sra
 
-la-tenk: build
-	@echo "Running the agent 10,000 times with different forward probabilities..."
+mra:
+	./scripts/run.sh --agent mra
 
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 1.0 -a false -t 3334 -f deterministic_out.txt > /dev/null
-	@echo "Done deterministic trials, results written to deterministic_out.txt"
+rla rla-deterministic:
+	./scripts/run.sh --agent rla -n 1
 
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.8 -a false -t 3333 -f stochastic_out.txt > /dev/null
-	@echo "Done stochastic trials, results written to stochastic_out.txt"
+rla-biased:
+	./scripts/run.sh --agent rla -n 0.8
 
-	@scala run -cp "target:lib/*" --main-class WorldApplication -- -n 0.3334 -a false -t 3333 -f random_out.txt > /dev/null
-	@echo "Done random trials, results written to random_out.txt"
+rla-uniform:
+	./scripts/run.sh --agent rla -n 0.3333333333333333
 
-	@cat deterministic_out.txt stochastic_out.txt random_out.txt > wumpus_out.txt
-	@rm -f deterministic_out.txt stochastic_out.txt random_out.txt
-	@cat wumpus_out.txt | grep 'Total Score:'
-	@cat wumpus_out.txt | grep 'Average Score:'
-	@echo "Complete results in wumpus_out.txt"
+lba:
+	./scripts/run.sh --agent lba
 
-# Clean the project and junk backup files
-# If junk backups exist before build, then they are indeed junk
+tenk:
+	./scripts/run.sh --agent uba -t 10000 --quiet
+
+la-tenk:
+	./scripts/run.sh --agent rla --mixed -t 10000 --quiet
+
 clean:
-	@rm -rf target
-
-# Phony targets
-.PHONY: sra mra uba rla-deterministic rla-biased rla-uniform lba check build run tenk clean
+	rm -rf target .scala-build .bsp

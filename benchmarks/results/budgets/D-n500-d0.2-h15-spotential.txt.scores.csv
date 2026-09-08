@@ -1,0 +1,11 @@
+trial,seed,agent,forward_probability,score,primitive_actions,arrows_fired,wumpus_kills,died,gold_collected,planning_nanos
+1,42,uba,1.0,-39,50,0,0,false,false,2932240627
+2,43,uba,1.0,1000,1,0,0,false,true,875
+3,44,uba,1.0,-43,50,0,0,false,false,2572973623
+4,45,uba,1.0,-42,50,1,0,false,false,2161687498
+5,46,uba,1.0,-48,50,1,0,false,false,12425328958
+6,47,uba,1.0,993,8,0,0,false,true,2053613460
+7,48,uba,1.0,976,32,0,0,false,true,7518539918
+8,49,uba,1.0,-44,50,0,0,false,false,5198895879
+9,50,uba,1.0,-43,50,1,0,false,false,6850093290
+10,51,uba,1.0,984,8,1,0,false,true,858966498
