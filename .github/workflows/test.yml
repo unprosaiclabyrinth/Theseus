@@ -27,7 +27,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/theseus-bin"
-          ln -s "$(command -v scala-cli)" "$RUNNER_TEMP/theseus-bin/scala"
+          # Coursier's launcher locates a sibling .aux file through $0, so use
+          # a forwarding script rather than moving it or creating a symlink.
+          printf '%s\n' '#!/bin/sh' 'exec scala-cli "$@"' > "$RUNNER_TEMP/theseus-bin/scala"
+          chmod +x "$RUNNER_TEMP/theseus-bin/scala"
           echo "$RUNNER_TEMP/theseus-bin" >> "$GITHUB_PATH"
       - uses: actions/setup-python@v5
         with:
