@@ -232,3 +232,14 @@ class PlannerSuite extends munit.FunSuite:
       System.setOut(console)
       discard.close()
   }
+
+  test("scream requires a newly fired arrow and does not recur after a kill") {
+    val b = belief(Set(world.copy(wumpus = (3, 2))))
+    val killed = b.transition(Move.Shoot).observe(Percept4(false, false, false, true))
+    assertEquals(killed.belief.size, 1)
+    val silent = Percept4(false, false, false, false)
+    assertEquals(killed.transition(Move.NoOp).observe(silent).belief, killed.belief)
+    assertEquals(killed.transition(Move.Shoot).observe(silent).belief, killed.belief)
+    assert(killed.transition(Move.NoOp).observe(silent.copy(scream = true)).belief.isEmpty)
+    assert(b.observe(silent.copy(scream = true)).belief.isEmpty)
+  }

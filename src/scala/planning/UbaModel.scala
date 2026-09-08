@@ -147,7 +147,8 @@ object UbaModel:
       agentOrientation: Orientation,
       hasArrow: Boolean,
       belief: Set[Unobservable],
-      history: History
+      history: History,
+      lastShotHadArrow: Boolean = false
   ):
     /** Given values for the unobservable variables, combine them with the observables encapsulated as a
       * deterministic state.
@@ -268,20 +269,7 @@ object UbaModel:
               hypothesisFilter( // scream update
                 belief,
                 percept.scream,
-                u =>
-                  history.lastOption match {
-                    case Some(update) =>
-                      update match {
-                        case m: Move =>
-                          if Set(Move.Shoot, Move.ShootLeft, Move.ShootRight) contains m then
-                            u.isInstanceOf[UnobservableSansWumpus]
-                          else
-                            percept.scream // no filtering, essentially identity function, keep belief as is
-                        case o: Percept4 => assert(false, "Observation after an observation in history.")
-                      }
-                    case None =>
-                      percept.scream // no filtering, essentially identity function, keep belief as is
-                  }
+                u => lastShotHadArrow && u.isInstanceOf[UnobservableSansWumpus]
               ),
               percept.stench,
               {
@@ -318,7 +306,11 @@ object UbaModel:
           case Move.ShootLeft  => agentOrientation.turnLeft
           case Move.ShootRight => agentOrientation.turnRight
           case _               => agentOrientation
-        return copy(agentOrientation = orientation, history = history.appendMove(move))
+        return copy(
+          agentOrientation = orientation,
+          history = history.appendMove(move),
+          lastShotHadArrow = false
+        )
       val (candidatePosition, ao, ha, posterior) = move match {
         case Move.GoForward =>
           (agentOrientation.forwardFrom(agentPosition), agentOrientation, hasArrow, belief)
@@ -400,7 +392,14 @@ object UbaModel:
         case u: UnobservableSansWumpus => !StateSansWumpus(ap, ao, u).isTerminal
       }
 
-      BeliefState(ap, ao, ha, alive, history.appendMove(move))
+      BeliefState(
+        ap,
+        ao,
+        ha,
+        alive,
+        history.appendMove(move),
+        hasArrow && RolloutPolicies.shots.contains(move)
+      )
 
     /** Sample a (deterministic) state from the belief prior.
       * @return
