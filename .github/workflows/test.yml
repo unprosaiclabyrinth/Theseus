@@ -20,5 +20,6 @@ jobs:
       - uses: VirtusLab/scala-cli-setup@v1
         with:
           version: '1.14.0'
+      - run: make lint
       - run: make test
       - run: git diff --exit-code

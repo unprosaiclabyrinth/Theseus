@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import itertools
 import math
 import platform
 import shutil
@@ -29,6 +30,7 @@ def summary(rows):
                 mean_primitive_actions=statistics.mean(int(row['primitive_actions']) for row in rows),
                 arrows_fired=sum(int(row['arrows_fired']) for row in rows),
                 wumpus_kills=sum(int(row['wumpus_kills']) for row in rows),
+                wumpus_kill_rate=statistics.mean(int(row['wumpus_kills']) > 0 for row in rows),
                 planning_seconds=sum(int(row['planning_nanos']) for row in rows)/1e9)
 
 
@@ -79,9 +81,7 @@ def main():
                   seed=args.seed, steps=args.steps, horizon=args.horizon,
                   confidence_note='Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.',
                   experiments={})
-    for horizon in horizons:
-      for shaping_override in shapings:
-       for simulations, discount in variants:
+    for horizon, shaping_override, (simulations, discount) in itertools.product(horizons, shapings, variants):
         for name, (tree, rollout, shaping) in cases.items():
             if args.case != 'all' and name != args.case:
                 continue

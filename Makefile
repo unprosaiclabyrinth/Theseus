@@ -1,6 +1,6 @@
 # Requires Scala CLI (the modern `scala` command) and JDK 21+.
 .DEFAULT_GOAL := help
-.PHONY: help all check build test run sra mra uba rla rla-deterministic rla-biased rla-uniform lba tenk la-tenk clean
+.PHONY: help all check build test lint format run sra mra uba rla rla-deterministic rla-biased rla-uniform lba tenk la-tenk clean
 
 help all:
 	@echo 'Targets: check build test run sra mra uba rla-deterministic rla-biased rla-uniform lba tenk la-tenk clean'
@@ -14,6 +14,15 @@ build:
 
 test:
 	./scripts/test.sh
+
+format:
+	./scripts/format.sh
+
+lint:
+	./scripts/format.sh --check
+	python3 -m py_compile scripts/benchmark.py
+	@for script in scripts/*.sh; do sh -n "$$script" || exit; done
+	git diff --check
 
 run uba:
 	./scripts/run.sh --agent uba

@@ -5,3 +5,6 @@ wumpus_*.txt
 release
 update.sh
 *.scores.csv
+
+__pycache__/
+*.pyc
