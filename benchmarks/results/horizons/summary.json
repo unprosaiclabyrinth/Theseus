@@ -1,0 +1,105 @@
+{
+  "commit": "15152740b0aa29e7beb3b9a9448c80db45d057b5",
+  "dirty": true,
+  "build_classes_sha256": "aa6c0ae3948b69f9574da78b70a9186cc889da73a637dd5d4917034272143dc6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "java": "openjdk 22.0.1 2024-04-16\nOpenJDK Runtime Environment (build 22.0.1+8-16)\nOpenJDK 64-Bit Server VM (build 22.0.1+8-16, mixed mode, sharing)\n",
+  "seed": 42,
+  "steps": 50,
+  "horizon": 15,
+  "confidence_note": "Normal approximation; small samples are exploratory. Timing includes JVM warmup; compare on the same host.",
+  "experiments": {
+    "D-n100-d0.2-h5-spotential": {
+      "trials": 10,
+      "mean_score": 267.9,
+      "score_sd": 500.63436424866666,
+      "mean_score_normal_95_ci": [
+        -42.396393731326896,
+        578.1963937313269
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.3,
+      "mean_primitive_actions": 36.5,
+      "arrows_fired": 2,
+      "wumpus_kills": 1,
+      "wumpus_kill_rate": 0.1,
+      "planning_seconds": 22.609755333,
+      "elapsed_seconds": 22.83139583398588,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 100,
+      "discount": 0.2,
+      "horizon": 5
+    },
+    "D-n100-d0.2-h10-spotential": {
+      "trials": 10,
+      "mean_score": 368.4,
+      "score_sd": 530.3160902287951,
+      "mean_score_normal_95_ci": [
+        39.706681908161954,
+        697.093318091838
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.4,
+      "mean_primitive_actions": 36.7,
+      "arrows_fired": 2,
+      "wumpus_kills": 2,
+      "wumpus_kill_rate": 0.2,
+      "planning_seconds": 29.671662215,
+      "elapsed_seconds": 29.901573040988296,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 100,
+      "discount": 0.2,
+      "horizon": 10
+    },
+    "D-n100-d0.2-h15-spotential": {
+      "trials": 10,
+      "mean_score": 269.7,
+      "score_sd": 499.38407619342007,
+      "mean_score_normal_95_ci": [
+        -39.82145716609409,
+        579.2214571660941
+      ],
+      "death_rate": 0,
+      "gold_rate": 0.3,
+      "mean_primitive_actions": 36.6,
+      "arrows_fired": 1,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 23.793034502,
+      "elapsed_seconds": 24.013658708019648,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 100,
+      "discount": 0.2,
+      "horizon": 15
+    },
+    "D-n100-d0.2-h30-spotential": {
+      "trials": 10,
+      "mean_score": 274.3,
+      "score_sd": 682.4404003281165,
+      "mean_score_normal_95_ci": [
+        -148.68094234137777,
+        697.2809423413778
+      ],
+      "death_rate": 0.1,
+      "gold_rate": 0.4,
+      "mean_primitive_actions": 30.6,
+      "arrows_fired": 2,
+      "wumpus_kills": 0,
+      "wumpus_kill_rate": 0,
+      "planning_seconds": 16.27862641,
+      "elapsed_seconds": 16.482441166997887,
+      "tree_policy": "heuristic",
+      "rollout": "informed",
+      "shaping": "potential",
+      "simulations": 100,
+      "discount": 0.2,
+      "horizon": 30
+    }
+  }
+}

@@ -23,7 +23,7 @@ The earlier Rational normalization, terminal success/death rewards, final value-
 | Maintenance | Pinned JVM Scalafmt; independently reported MUnit cases; CI lint and tests | `make lint`, `make test`, GitHub workflow |
 | Documentation | Explicit macro costs, posterior assumptions, policy formulas, defaults, interpretation and limits | `docs/PLANNER.md` |
 
-Validation passed locally: **31 MUnit tests and 4 Python tests**, including the 108 parity scenarios and two runs over ten fixed worlds. A clean rebuild passed during this pass. Java and Scala output use class-file version 65 (Java 21). Local execution used OpenJDK 22.0.1; the configured macOS/Linux JDK 21 CI workflow has not been run remotely here.
+Validation passed locally: **31 MUnit tests and 4 Python tests**, including the 108 parity scenarios and two runs over ten fixed worlds. A clean rebuild and an independently extracted source archive both passed. Java and Scala output use class-file version 65 (Java 21). Local execution used OpenJDK 22.0.1; the configured macOS/Linux JDK 21 CI workflow has not been run remotely here.
 
 ## Experimental interpretation
 
