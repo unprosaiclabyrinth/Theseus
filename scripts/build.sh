@@ -14,5 +14,5 @@ else
     scala compile project.scala src --server=false -d target --print-class-path > target/dependencies.classpath
 fi
 classpath=$(cat target/dependencies.classpath)
-javac -cp "$classpath" -d target src/java/*.java
+javac --release 21 -cp "$classpath" -d target src/java/*.java
 printf '%s\n' "$PWD/target:$classpath" > target/runtime.classpath

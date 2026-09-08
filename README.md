@@ -29,6 +29,7 @@ The agent aims to maximize the **average** score over a large number of trials. 
 
 Requires a full **JDK 21 or newer** and **Scala CLI** (the modern `scala` command).
 Tests and benchmark scripts also require **Python 3.10 or newer**; they use only the standard library.
+Scala and Java both target Java 21 APIs and bytecode, even when built with a newer JDK.
 The compiler is pinned to Scala 3.8.3 in `project.scala`. Install Scala CLI from
 [its installation guide](https://scala-cli.virtuslab.org/install/) and a JDK before running:
 
